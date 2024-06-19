@@ -766,7 +766,6 @@ var unsupportedEvalFuncs = map[string]struct{}{
 	"coalesce":         {},
 	"searchmatch":      {},
 	"validate":         {},
-	"nullif":           {},
 	"ipmask":           {},
 	"object_to_array":  {},
 	"printf":           {},

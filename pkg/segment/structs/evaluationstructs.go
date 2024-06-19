@@ -1555,6 +1555,40 @@ func (self *ValueExpr) EvaluateValueExprAsString(fieldToValue map[string]utils.C
 	return str, nil
 }
 
+
+func isValueExprField(valExp *ValueExpr) bool {
+	if valExp.ValueExprMode != VEMNumericExpr {
+		return false
+	}
+	if valExp.NumericExpr.Left != nil || valExp.NumericExpr.Right != nil {
+		return false;
+	}
+	return valExp.NumericExpr.Op == "" && valExp.NumericExpr.IsTerminal && valExp.NumericExpr.ValueIsField
+}
+
+
+func handleNullIfFunction(self *ConditionExpr, fieldToValue map[string]utils.CValueEnclosure) (string, error) {
+	valExpr := self.ValueList[0]
+	valExpr2 := self.ValueList[1]
+	if !(isValueExprField(valExpr) && isValueExprField(valExpr2)) {
+		return "", fmt.Errorf("handleNullIfFunction: NullIf only accepts field values as parameters")
+	}
+	str, err := valExpr.EvaluateValueExprAsString(fieldToValue)
+	if err != nil {
+		return "", fmt.Errorf("handleNullIfFunction: Error while evaluating valueExpr as string, err: %v", err)
+	}
+	str2, err := valExpr2.EvaluateValueExprAsString(fieldToValue)
+	if err != nil {
+		return "", fmt.Errorf("handleNullIfFunction: Error while evaluating valueExpr as string, err: %v", err)
+	}
+
+	if str == str2 {
+		return "", nil
+	}
+
+	return str, nil
+}
+
 // Field may come from BoolExpr or ValueExpr
 func (self *ConditionExpr) EvaluateCondition(fieldToValue map[string]utils.CValueEnclosure) (string, error) {
 
@@ -1578,6 +1612,8 @@ func (self *ConditionExpr) EvaluateCondition(fieldToValue map[string]utils.CValu
 		} else {
 			return falseValue, nil
 		}
+	case "nullif":
+		return handleNullIfFunction(self, fieldToValue)
 	default:
 		return "", fmt.Errorf("ConditionExpr.EvaluateCondition: unsupported operation: %v", self.Op)
 	}
@@ -1625,6 +1661,9 @@ func (self *ConditionExpr) GetFields() []string {
 	}
 	for _, pair := range self.ConditionValuePairs {
 		fields = append(fields, pair.Condition.GetFields()...)
+	}
+	for _, valueExpr := range self.ValueList {
+		fields = append(fields, valueExpr.GetFields()...)
 	}
 	return fields
 }
