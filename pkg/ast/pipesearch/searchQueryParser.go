@@ -58,7 +58,10 @@ func ParseRequest(searchText string, startEpoch, endEpoch uint64, qid uint64, qu
 		log.Errorf("qid=%d, ParseRequest: parseTimeRange error: %v", qid, err)
 		return nil, nil, err
 	}
-	boolNode.TimeRange = tRange
+
+	if boolNode.TimeRange == nil {
+		boolNode.TimeRange = tRange
+	}
 
 	//aggs
 	if queryAggs != nil {
