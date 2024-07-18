@@ -270,6 +270,8 @@ func getResults(ssResults *structs.RunningStreamStatsResults, measureAgg utils.A
 		}
 		ssResults.CurrResult = maxFloatVal - minFloatval
 		return ssResults.CurrResult, true, nil
+	case utils.Cardinality:
+		return ssResults.CurrResult, true, nil
 	default:
 		return 0, false, fmt.Errorf("getResults: Error measureAgg: %v not supported", measureAgg)
 	}
@@ -386,6 +388,15 @@ func performMeasureFunc(currIndex int, ssResults *structs.RunningStreamStatsResu
 			return 0.0, fmt.Errorf("performMeasureFunc: Error while getting float value from min window element, err: %v", err)
 		}
 		ssResults.CurrResult = maxFloatVal - minFloatval
+	case utils.Cardinality:
+		strValue := fmt.Sprintf("%v", colValue)
+		_, exist := ssResults.CardinalityMap[strValue]
+		if !exist {
+			ssResults.CardinalityMap[strValue] = 1
+		} else {
+			ssResults.CardinalityMap[strValue]++
+		}
+		ssResults.CurrResult = float64(len(ssResults.CardinalityMap))
 	default:
 		return 0.0, fmt.Errorf("performMeasureFunc: Error measureAgg: %v not supported", measureAgg)
 	}
