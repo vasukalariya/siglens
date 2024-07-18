@@ -23,6 +23,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/axiomhq/hyperloglog"
 	"github.com/siglens/siglens/pkg/common/dtypeutils"
 	"github.com/siglens/siglens/pkg/segment/structs"
 	"github.com/siglens/siglens/pkg/segment/utils"
@@ -56,7 +57,7 @@ func InitRangeStat() *structs.RangeStat {
 	}
 }
 
-func PerformGlobalStreamStatsOnSingleFunc(ssOption *structs.StreamStatsOptions, ssResults *structs.RunningStreamStatsResults, measureAgg utils.AggregateFunctions, colValue interface{}) (float64, bool, error) {
+func PerformNoWindowStreamStatsOnSingleFunc(ssOption *structs.StreamStatsOptions, ssResults *structs.RunningStreamStatsResults, measureAgg utils.AggregateFunctions, colValue interface{}) (float64, bool, error) {
 	result := ssResults.CurrResult
 	valExist := ssResults.NumProcessedRecords > 0
 
@@ -70,13 +71,13 @@ func PerformGlobalStreamStatsOnSingleFunc(ssOption *structs.StreamStatsOptions, 
 	case utils.Sum, utils.Avg:
 		floatVal, err := dtypeutils.ConvertToFloat(colValue, 64)
 		if err != nil {
-			return 0.0, false, fmt.Errorf("PerformGlobalStreamStatsOnSingleFunc: Error: measure column %v does not have a numeric value, function: %v, err: %v", colValue, measureAgg, err)
+			return 0.0, false, fmt.Errorf("PerformNoWindowStreamStatsOnSingleFunc: Error: measure column %v does not have a numeric value, function: %v, err: %v", colValue, measureAgg, err)
 		}
 		ssResults.CurrResult += floatVal
 	case utils.Min:
 		floatVal, err := dtypeutils.ConvertToFloat(colValue, 64)
 		if err != nil {
-			return 0.0, false, fmt.Errorf("PerformGlobalStreamStatsOnSingleFunc: Error: measure column %v does not have a numeric value, function: %v, err: %v", colValue, measureAgg, err)
+			return 0.0, false, fmt.Errorf("PerformNoWindowStreamStatsOnSingleFunc: Error: measure column %v does not have a numeric value, function: %v, err: %v", colValue, measureAgg, err)
 		}
 		if floatVal < ssResults.CurrResult {
 			ssResults.CurrResult = floatVal
@@ -84,7 +85,7 @@ func PerformGlobalStreamStatsOnSingleFunc(ssOption *structs.StreamStatsOptions, 
 	case utils.Max:
 		floatVal, err := dtypeutils.ConvertToFloat(colValue, 64)
 		if err != nil {
-			return 0.0, false, fmt.Errorf("PerformGlobalStreamStatsOnSingleFunc: Error: measure column %v does not have a numeric value, function: %v, err: %v", colValue, measureAgg, err)
+			return 0.0, false, fmt.Errorf("PerformNoWindowStreamStatsOnSingleFunc: Error: measure column %v does not have a numeric value, function: %v, err: %v", colValue, measureAgg, err)
 		}
 		if floatVal > ssResults.CurrResult {
 			ssResults.CurrResult = floatVal
@@ -92,7 +93,7 @@ func PerformGlobalStreamStatsOnSingleFunc(ssOption *structs.StreamStatsOptions, 
 	case utils.Range:
 		floatVal, err := dtypeutils.ConvertToFloat(colValue, 64)
 		if err != nil {
-			return 0.0, false, fmt.Errorf("PerformGlobalStreamStatsOnSingleFunc: Error: measure column %v does not have a numeric value, function: %v, err: %v", colValue, measureAgg, err)
+			return 0.0, false, fmt.Errorf("PerformNoWindowStreamStatsOnSingleFunc: Error: measure column %v does not have a numeric value, function: %v, err: %v", colValue, measureAgg, err)
 		}
 		if ssResults.RangeStat == nil {
 			ssResults.RangeStat = InitRangeStat()
@@ -104,8 +105,15 @@ func PerformGlobalStreamStatsOnSingleFunc(ssOption *structs.StreamStatsOptions, 
 			ssResults.RangeStat.Max = floatVal
 		}
 		ssResults.CurrResult = ssResults.RangeStat.Max - ssResults.RangeStat.Min
+	case utils.Cardinality:
+		strValue := fmt.Sprintf("%v", colValue)
+		if ssResults.CardinalityHLL == nil {
+			ssResults.CardinalityHLL = hyperloglog.New()
+		}
+		ssResults.CardinalityHLL.Insert([]byte(strValue))
+		ssResults.CurrResult = float64(ssResults.CardinalityHLL.Estimate())
 	default:
-		return 0.0, false, fmt.Errorf("PerformGlobalStreamStatsOnSingleFunc: Error: measureAgg: %v not supported", measureAgg)
+		return 0.0, false, fmt.Errorf("PerformNoWindowStreamStatsOnSingleFunc: Error: measureAgg: %v not supported", measureAgg)
 	}
 
 	ssResults.NumProcessedRecords++
@@ -138,6 +146,18 @@ func removeFrontElementFromWindow(window *list.List, ssResults *structs.RunningS
 		ssResults.CurrResult -= floatVal
 	} else if measureAgg == utils.Count {
 		ssResults.CurrResult--
+	} else if measureAgg == utils.Cardinality {
+		strValue := fmt.Sprintf("%v", frontElement.Value)
+		_, exist := ssResults.CardinalityMap[strValue]
+		if exist {
+			ssResults.CardinalityMap[strValue]--
+			if ssResults.CardinalityMap[strValue] == 0 {
+				delete(ssResults.CardinalityMap, strValue)
+			}
+		} else {
+			return fmt.Errorf("removeFrontElementFromWindow: Error: cardinality map does not contain the value: %v which is present in the window", strValue)
+		}
+		ssResults.CurrResult = float64(len(ssResults.CardinalityMap))
 	}
 
 	window.Remove(window.Front())
@@ -389,6 +409,9 @@ func performMeasureFunc(currIndex int, ssResults *structs.RunningStreamStatsResu
 		}
 		ssResults.CurrResult = maxFloatVal - minFloatval
 	case utils.Cardinality:
+		if ssResults.CardinalityMap == nil {
+			ssResults.CardinalityMap = make(map[string]int, 0)
+		}
 		strValue := fmt.Sprintf("%v", colValue)
 		_, exist := ssResults.CardinalityMap[strValue]
 		if !exist {
@@ -397,6 +420,7 @@ func performMeasureFunc(currIndex int, ssResults *structs.RunningStreamStatsResu
 			ssResults.CardinalityMap[strValue]++
 		}
 		ssResults.CurrResult = float64(len(ssResults.CardinalityMap))
+		ssResults.Window.PushBack(&structs.RunningStreamStatsWindowElement{Index: currIndex, Value: colValue, TimeInMilli: timestamp})
 	default:
 		return 0.0, fmt.Errorf("performMeasureFunc: Error measureAgg: %v not supported", measureAgg)
 	}
@@ -488,7 +512,7 @@ func PerformStreamStatsOnSingleFunc(currIndex int, bucketKey string, ssOption *s
 	}
 
 	if ssOption.Window == 0 && ssOption.TimeWindow == nil {
-		result, exist, err = PerformGlobalStreamStatsOnSingleFunc(ssOption, ssOption.RunningStreamStats[measureFuncIndex][bucketKey], measureAgg.MeasureFunc, colValue)
+		result, exist, err = PerformNoWindowStreamStatsOnSingleFunc(ssOption, ssOption.RunningStreamStats[measureFuncIndex][bucketKey], measureAgg.MeasureFunc, colValue)
 		if err != nil {
 			return 0.0, false, fmt.Errorf("PerformStreamStatsOnSingleFunc: Error while performing global stream stats on function %v for value %v, err: %v", measureAgg.MeasureFunc, colValue, err)
 		}
@@ -561,8 +585,8 @@ func PerformStreamStatOnSingleRecord(nodeResult *structs.NodeResult, agg *struct
 		if exist {
 			record[measureAgg.String()] = streamStatsResult
 		} else {
-			if measureAgg.MeasureFunc == utils.Count {
-				record[measureAgg.String()] = 0
+			if measureAgg.MeasureFunc == utils.Count || measureAgg.MeasureFunc == utils.Cardinality {
+				record[measureAgg.String()] = 0.0
 			} else {
 				record[measureAgg.String()] = ""
 			}
