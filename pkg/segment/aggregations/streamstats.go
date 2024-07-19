@@ -772,7 +772,11 @@ func performStreamStatsOnHistogram(nodeResult *structs.NodeResult, ssOption *str
 		measureAggs = agg.GroupByRequest.MeasureOperations
 	}
 	for _, measureAgg := range measureAggs {
-		fieldsInExpr = append(fieldsInExpr, measureAgg.MeasureCol)
+		if measureAgg.ValueColRequest != nil {
+			fieldsInExpr = append(fieldsInExpr, measureAgg.ValueColRequest.GetFields()...)
+		} else {
+			fieldsInExpr = append(fieldsInExpr, measureAgg.MeasureCol)
+		}
 	}
 
 	currIndex := 0
@@ -860,7 +864,11 @@ func performStreamStatsOnMeasureResults(nodeResult *structs.NodeResult, ssOption
 		measureAggs = agg.GroupByRequest.MeasureOperations
 	}
 	for _, measureAgg := range measureAggs {
-		fieldsInExpr = append(fieldsInExpr, measureAgg.MeasureCol)
+		if measureAgg.ValueColRequest != nil {
+			fieldsInExpr = append(fieldsInExpr, measureAgg.ValueColRequest.GetFields()...)
+		} else {
+			fieldsInExpr = append(fieldsInExpr, measureAgg.MeasureCol)
+		}
 	}
 
 	currIndex := 0
