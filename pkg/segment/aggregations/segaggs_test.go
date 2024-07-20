@@ -2609,7 +2609,7 @@ func WindowStreamStatsHelperTest(t *testing.T, values []float64, ssOption *struc
 	for i, measureFunc := range measureFuncs {
 		ssResults := InitRunningStreamStatsResults(measureFunc)
 		for j, value := range values {
-			res, exist, err := PerformWindowStreamStatsOnSingleFunc(j, ssOption, ssResults, windowSize, measureFunc, value, timestamps[j], true)
+			res, exist, err := PerformWindowStreamStatsOnSingleFunc(j, ssOption, ssResults, windowSize, measureFunc, value, timestamps[j], true, true)
 			assert.Nil(t, err)
 			if !ssOption.Current {
 				if j == 0 {
@@ -2646,7 +2646,7 @@ func NoWindowStreamStatsHelperTest(t *testing.T, values []float64, ssOption *str
 		ssOption.NumProcessedRecords = 0
 
 		for j, value := range values {
-			res, exist, err := PerformNoWindowStreamStatsOnSingleFunc(ssOption, ssResults, measureFunc, value)
+			res, exist, err := PerformNoWindowStreamStatsOnSingleFunc(ssOption, ssResults, measureFunc, value, true)
 			ssOption.NumProcessedRecords++
 			assert.Nil(t, err)
 			assert.True(t, exist)
@@ -2693,6 +2693,9 @@ func Test_PerformWindowStreamStatsOnSingleFunc(t *testing.T) {
 
 	WindowStreamStatsHelperTest(t, values, ssOption, windowSize, timestamps, measureFunctions, expectedFuncValues, expectedFuncValues2, expectedPrimaryLen, expectedSecondaryLen)
 
+	ssOption.Global = false
+
+	WindowStreamStatsHelperTest(t, values, ssOption, windowSize, timestamps, measureFunctions, expectedFuncValues, expectedFuncValues2, expectedPrimaryLen, expectedSecondaryLen)
 }
 
 func Test_PerformWindowStreamStatsOnSingleFunc_2(t *testing.T) {
@@ -2722,6 +2725,9 @@ func Test_PerformWindowStreamStatsOnSingleFunc_2(t *testing.T) {
 
 	WindowStreamStatsHelperTest(t, values, ssOption, windowSize, timestamps, measureFunctions, expectedFuncValues, expectedFuncValues2, expectedPrimaryLen, expectedSecondaryLen)
 
+	ssOption.Global = false
+
+	WindowStreamStatsHelperTest(t, values, ssOption, windowSize, timestamps, measureFunctions, expectedFuncValues, expectedFuncValues2, expectedPrimaryLen, expectedSecondaryLen)
 }
 
 func Test_Time_Window(t *testing.T) {
@@ -2755,6 +2761,9 @@ func Test_Time_Window(t *testing.T) {
 
 	WindowStreamStatsHelperTest(t, values, ssOption, windowSize, timestamps, measureFunctions, expectedFuncValues, expectedFuncValues2, expectedPrimaryLen, expectedSecondaryLen)
 
+	ssOption.Global = false
+
+	WindowStreamStatsHelperTest(t, values, ssOption, windowSize, timestamps, measureFunctions, expectedFuncValues, expectedFuncValues2, expectedPrimaryLen, expectedSecondaryLen)
 }
 
 func Test_NoWindow_StreamStats(t *testing.T) {
@@ -2774,6 +2783,10 @@ func Test_NoWindow_StreamStats(t *testing.T) {
 	expectedFuncValues := [][]float64{expectedValuesCount, expectedValuesSum, expectedValuesAvg, expectedValuesMax, expectedValuesMin, expectedValuesRange}
 	expectedFuncValues2 := [][]float64{expectedValuesCount, expectedValuesSum, expectedValuesSum, expectedValuesMax, expectedValuesMin, expectedValuesMax}
 	expectedFuncValues3 := [][]float64{expectedValuesCount, expectedValuesSum, expectedValuesSum, expectedValuesMax, expectedValuesMin, expectedValuesMin}
+
+	NoWindowStreamStatsHelperTest(t, values, ssOption, measureFunctions, expectedFuncValues, expectedFuncValues2, expectedFuncValues3)
+
+	ssOption.Global = false
 
 	NoWindowStreamStatsHelperTest(t, values, ssOption, measureFunctions, expectedFuncValues, expectedFuncValues2, expectedFuncValues3)
 }
