@@ -364,10 +364,10 @@ func (sr *SearchResults) UpdateSegmentStats(sstMap map[string]*structs.SegStats,
 				uniqueStrings = append(uniqueStrings, str)
 			}
 			sort.Strings(uniqueStrings)
-			strVal := strings.Join(uniqueStrings, "&nbsp")
+			// strVal := strings.Join(uniqueStrings, "&nbsp")
 			sr.segStatsResults.measureResults[measureAgg.String()] = utils.CValueEnclosure{
-				Dtype: utils.SS_DT_STRING,
-				CVal:  strVal,
+				Dtype: utils.SS_DT_STRING_SLICE,
+				CVal:  uniqueStrings,
 			}
 			continue
 		default:
@@ -513,8 +513,13 @@ func (sr *SearchResults) GetSegmentStatsResults(skEnc uint16) ([]*structs.Bucket
 			bucketHolder.MeasureVal[mfName] = humanize.CommafWithDigits(aggVal.CVal.(float64), 3)
 		case utils.SS_DT_SIGNED_NUM:
 			bucketHolder.MeasureVal[mfName] = humanize.Comma(aggVal.CVal.(int64))
-		case utils.SS_DT_STRING:
-			bucketHolder.MeasureVal[mfName] = aggVal.CVal
+		case utils.SS_DT_STRING, utils.SS_DT_STRING_SLICE:
+			strVal, err := aggVal.GetString()
+			if err != nil {
+				log.Errorf("GetSegmentStatsResults: failed to get string value of %v, qid: %v, err: %v", aggVal, sr.qid, err)
+				strVal = ""
+			}
+			bucketHolder.MeasureVal[mfName] = strVal
 		}
 	}
 	aggMeasureResult := []*structs.BucketHolder{bucketHolder}
