@@ -30,6 +30,7 @@ import (
 	"github.com/siglens/siglens/pkg/segment/structs"
 	"github.com/siglens/siglens/pkg/segment/utils"
 	putils "github.com/siglens/siglens/pkg/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 func GetBucketKey(record map[string]interface{}, groupByRequest *structs.GroupByRequest) (string, error) {
@@ -74,7 +75,7 @@ func getValues[T any](valuesMap map[string]T) string {
 	return strings.Join(uniqueStrings, "&nbsp")
 }
 
-func PerformNoWindowStreamStatsOnSingleFunc(ssOption *structs.StreamStatsOptions, ssResults *structs.RunningStreamStatsResults, measureAgg utils.AggregateFunctions, colValue interface{}) (interface{}, bool, error) {
+func PerformNoWindowStreamStatsOnSingleFunc(ssOption *structs.StreamStatsOptions, ssResults *structs.RunningStreamStatsResults, measureAgg utils.AggregateFunctions, colValue interface{}, fieldToValue map[string]utils.CValueEnclosure) (interface{}, bool, error) {
 	var result interface{}
 	if measureAgg == utils.Values && !ssOption.Current {
 		// getting values is expensive only do when required
@@ -463,7 +464,7 @@ func performMeasureFunc(currIndex int, ssResults *structs.RunningStreamStatsResu
 }
 
 func PerformWindowStreamStatsOnSingleFunc(currIndex int, ssOption *structs.StreamStatsOptions, ssResults *structs.RunningStreamStatsResults,
-	windowSize int, measureAgg utils.AggregateFunctions, colValue interface{}, timestamp uint64,
+	windowSize int, measureAgg utils.AggregateFunctions, colValue interface{}, fieldToValue map[string]utils.CValueEnclosure, timestamp uint64,
 	timeSortAsc bool) (interface{}, bool, error) {
 	var err error
 	var result interface{}
@@ -503,6 +504,10 @@ func PerformWindowStreamStatsOnSingleFunc(currIndex int, ssOption *structs.Strea
 		}
 	}
 
+	if measureAgg.ValueColRequest != nil {
+		colValue, includeColValue, err := EvaluateMeasureAggValueColRequest(measureAgg, fieldToValue)
+	}
+
 	// Add the new element to the window
 	latestResult, err := performMeasureFunc(currIndex, ssResults, measureAgg, colValue, timestamp)
 	if err != nil {
@@ -516,6 +521,79 @@ func PerformWindowStreamStatsOnSingleFunc(currIndex int, ssOption *structs.Strea
 	return latestResult, true, nil
 }
 
+func EvaluateMeasureAggValueColRequest(measureAgg *structs.MeasureAggregator, , record map[string]interface{}) (interface{}, bool, error) {
+	var result interface{}
+	var err error
+	includeColValue := false
+	if measureAgg.ValueColRequest == nil {
+		return nil, true, nil
+	}
+
+	fields := measureAgg.ValueColRequest.GetFields()
+	fieldToValue := make(map[string]utils.CValueEnclosure, 0)
+	err = getRecordFieldValues(fieldToValue, fields, record)
+	if err != nil {
+		return nil, false, fmt.Errorf("EvaluateMeasureAggValueColRequest: Error while fetching values, err: %v", err)
+	}
+
+	switch measureAgg.MeasureFunc {
+	case utils.Count:
+		result, err = PerformEvalAggForCount(measureAgg, 1, false, currResult, fieldToValue)
+		if err != nil {
+			log.Errorf("EvaluateMeasureAggValueColRequest: Error while evaluating count, err: %v", err)
+			includeColValue = false
+			result = nil
+		}
+	case utils.Sum:
+		result, err = PerformEvalAggForSum(measureAgg, 1, false, currResult, fieldToValue)
+		if err != nil {
+			log.Errorf("EvaluateMeasureAggValueColRequest: Error while evaluating count, err: %v", err)
+			includeColValue = false
+			result = nil
+		}
+	case utils.Avg:
+		result, err = PerformEvalAggForAvg(measureAgg, 1, false, structs.AvgStat{}, fieldToValue)
+		if err != nil {
+			log.Errorf("EvaluateMeasureAggValueColRequest: Error while evaluating count, err: %v", err)
+			includeColValue = false
+			result = nil
+		}
+	case utils.Min, utils.Max:
+		isMin := utils.Min == measureAgg.MeasureFunc
+		result, err = PerformEvalAggForMinOrMax(measureAgg, false, currResult, fieldToValue, isMin)
+		if err != nil {
+			log.Errorf("EvaluateMeasureAggValueColRequest: Error while evaluating count, err: %v", err)
+			includeColValue = false
+			result = nil
+		}
+	case utils.Range:
+		isMin := utils.Min == measureAgg.MeasureFunc
+		result, err = PerformEvalAggForMinOrMax(measureAgg, false, currResult, fieldToValue, isMin)
+		if err != nil {
+			log.Errorf("EvaluateMeasureAggValueColRequest: Error while evaluating count, err: %v", err)
+			includeColValue = false
+			result = nil
+		}
+	case utils.Cardinality, utils.Values:
+		result, err = measureAgg.ValueColRequest.EvaluateToString(fieldToValue)
+		if err != nil {
+			nullFields, nullFieldErr := measureAgg.ValueColRequest.GetNullFields(fieldToValue)
+			if nullFieldErr != nil {
+				return nil, false, fmt.Errorf("EvaluateMeasureAggValueColRequest: Error while evaluating value column request, err: %v, nullFieldErr: %v", err, nullFieldErr)
+			} else if len(nullFields) > 0 {
+				result = ""
+			} else {
+				return nil, false, fmt.Errorf("EvaluateMeasureAggValueColRequest: Error while evaluating value column request, err: %v", err)
+			}
+		}
+		boolResult = true
+	default:
+		return nil, false, fmt.Errorf("EvaluateMeasureAggValueColRequest: Error: measure function %v not supported", measureAgg.MeasureFunc)
+	}
+
+	return result, boolResult, nil
+}
+
 func PerformStreamStatsOnSingleFunc(currIndex int, bucketKey string, ssOption *structs.StreamStatsOptions, measureFuncIndex int, measureAgg *structs.MeasureAggregator, record map[string]interface{}, timestamp uint64, timeSortAsc bool) (interface{}, bool, error) {
 
 	var err error
@@ -524,6 +602,13 @@ func PerformStreamStatsOnSingleFunc(currIndex int, bucketKey string, ssOption *s
 	colValue, exist := record[measureAgg.MeasureCol]
 	if !exist {
 		return 0.0, false, fmt.Errorf("PerformStreamStatsOnSingleFunc: Error, measure column: %v not found in the record", measureAgg.MeasureCol)
+	}
+	fieldToValue := make(map[string]utils.CValueEnclosure, 0)
+	if measureAgg.ValueColRequest != nil {
+		err = getRecordFieldValues(fieldToValue, measureAgg.ValueColRequest.GetFields(), record)
+		if err != nil {
+			return 0.0, false, fmt.Errorf("PerformStreamStatsOnSingleFunc: Error while fetching values, err: %v", err)
+		}
 	}
 
 	_, exist = ssOption.RunningStreamStats[measureFuncIndex]
@@ -537,12 +622,12 @@ func PerformStreamStatsOnSingleFunc(currIndex int, bucketKey string, ssOption *s
 	}
 
 	if ssOption.Window == 0 && ssOption.TimeWindow == nil {
-		result, exist, err = PerformNoWindowStreamStatsOnSingleFunc(ssOption, ssOption.RunningStreamStats[measureFuncIndex][bucketKey], measureAgg.MeasureFunc, colValue)
+		result, exist, err = PerformNoWindowStreamStatsOnSingleFunc(ssOption, ssOption.RunningStreamStats[measureFuncIndex][bucketKey], measureAgg.MeasureFunc, colValue, fieldToValue)
 		if err != nil {
 			return 0.0, false, fmt.Errorf("PerformStreamStatsOnSingleFunc: Error while performing global stream stats on function %v for value %v, err: %v", measureAgg.MeasureFunc, colValue, err)
 		}
 	} else {
-		result, exist, err = PerformWindowStreamStatsOnSingleFunc(currIndex, ssOption, ssOption.RunningStreamStats[measureFuncIndex][bucketKey], int(ssOption.Window), measureAgg.MeasureFunc, colValue, timestamp, timeSortAsc)
+		result, exist, err = PerformWindowStreamStatsOnSingleFunc(currIndex, ssOption, ssOption.RunningStreamStats[measureFuncIndex][bucketKey], int(ssOption.Window), measureAgg.MeasureFunc, colValue, fieldToValue, timestamp, timeSortAsc)
 		if err != nil {
 			return 0.0, false, fmt.Errorf("PerformStreamStatsOnSingleFunc: Error while performing window stream stats on function %v for value %v, err: %v", measureAgg.MeasureFunc, colValue, err)
 		}
