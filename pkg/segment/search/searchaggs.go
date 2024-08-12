@@ -177,10 +177,29 @@ func addRecordToAggregations(grpReq *structs.GroupByRequest, timeHistogram *stru
 	hasLimitOption := false
 	groupByColValCnt := make(map[string]int, 0)
 	var timeRangeBuckets []uint64
+	colsToValidate := []string{}
+
 	if usedByTimechart {
 		timeRangeBuckets = aggregations.GenerateTimeRangeBuckets(timeHistogram)
 		hasLimitOption = timeHistogram.Timechart.LimitExpr != nil
+		if len(timeHistogram.Timechart.ByField) > 0 {
+			colsToValidate = append(colsToValidate, timeHistogram.Timechart.ByField)
+		}
+	} else {
+		colsToValidate = append(colsToValidate, grpReq.GroupByColumns...)
 	}
+
+	for col := range measureInfo {
+		colsToValidate = append(colsToValidate, col)
+	}
+
+	err := multiColReader.ValidatSegFileReaderBlock(colsToValidate, blockNum)
+	if err != nil {
+		log.Errorf("addRecordToAggregations: failed to validate column file for block %v: %v", blockNum, err)
+		return
+	}
+
+	// add the check here
 	for recNum := uint16(0); recNum < recIT.AllRecLen; recNum++ {
 		if !recIT.ShouldProcessRecord(uint(recNum)) {
 			continue

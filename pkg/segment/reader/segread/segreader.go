@@ -171,21 +171,33 @@ func (sfr *SegmentFileReader) loadBlockUsingBuffer(blockNum uint16) (bool, error
 	}
 }
 
+func (mcsr *MultiColSegmentReader) ValidatSegFileReaderBlock(cols []string, blockNum uint16) error {
+	for _, col := range cols {
+		keyIndex, ok := mcsr.allColsReverseIndex[col]
+		if !ok {
+			return fmt.Errorf("MultiColSegmentReader.ValidatSegFileReaderBlock: failed to find column %s in multi col reader. All cols: %+v", col, mcsr.allColsReverseIndex)
+		}
+		
+		sfr := mcsr.allFileReaders[keyIndex]
+		if !sfr.isBlockLoaded || sfr.currBlockNum != blockNum {
+			valid, err := sfr.readBlock(blockNum)
+			if !valid {
+				return err
+			}
+			if err != nil {
+				return fmt.Errorf("SegmentFileReader.ValidatSegFileReaderBlock: error loading blockNum: %v. Error: %+v", blockNum, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// block will be loaded and segmentFileReader's currBlock will be same as blockNum
 // returns the raw bytes of the blockNum:recordNum combination in the current segfile
 // optimized for subsequent calls to have the same blockNum
 // returns : encodedVal, error
 func (sfr *SegmentFileReader) ReadRecordFromBlock(blockNum uint16, recordNum uint16) ([]byte, error) {
-
-	if !sfr.isBlockLoaded || sfr.currBlockNum != blockNum {
-		valid, err := sfr.readBlock(blockNum)
-		if !valid {
-			return nil, err
-		}
-		if err != nil {
-			log.Errorf("SegmentFileReader.ReadRecordFromBlock: error loading blockNum: %v. Error: %+v", blockNum, err)
-			return nil, err
-		}
-	}
 
 	// if dict encoding, we use the dictmapping
 	if sfr.encType == utils.ZSTD_DICTIONARY_BLOCK[0] {

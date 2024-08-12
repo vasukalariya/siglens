@@ -27,6 +27,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func getRequiredColsForSearchQuery(sq *SearchQuery, allCols map[string]bool) []string {
+	var searchCols []string
+	switch sq.SearchType {
+	case MatchAll, :
+		return searchCols
+	case MatchWords, MatchWordsAllColumns:
+		searchCols = append(searchCols, sq.QueryInfo.ColName)
+	case SimpleExpression, RegexExpression, SimpleExpressionAllColumns, RegexExpressionAllColumns:
+		searchCols = append(searchCols, sq.QueryInfo.ColName)
+	case MatchDictArraySingleColumn, MatchDictArrayAllColumns:
+		searchCols = append(searchCols, sq.QueryInfo.ColName)
+	default:
+		log.Errorf("getRequiredColsForSearchQuery: unsupported query type! %+v", sq.SearchType)
+	}
+	return searchCols
+}
+
 // TODO: support for complex expressions
 func ApplyColumnarSearchQuery(query *SearchQuery, multiColReader *segread.MultiColSegmentReader,
 	blockNum uint16, recordNum uint16, holderDte *DtypeEnclosure, qid uint64,

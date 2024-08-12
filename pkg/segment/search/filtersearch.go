@@ -95,6 +95,7 @@ func filterBlockRequestFromQuery(multiColReader *segread.MultiColSegmentReader, 
 
 	holderDte := &utils.DtypeEnclosure{}
 	for blockReq := range resultsChan {
+		// add check here
 		blockHelper.ResetBlockHelper()
 		recIT, err := segmentSearch.GetRecordIteratorForBlock(op, blockReq.BlockNum)
 		if err != nil {
@@ -181,6 +182,7 @@ func filterRecordsFromSearchQuery(query *structs.SearchQuery, segmentSearch *Seg
 	}
 
 	if doRecLevelSearch {
+		
 		for i := uint(0); i < uint(recIT.AllRecLen); i++ {
 			if recIT.ShouldProcessRecord(i) {
 				matched, err := ApplyColumnarSearchQuery(query, multiColReader, blockNum, uint16(i), holderDte,
