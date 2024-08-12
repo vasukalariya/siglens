@@ -46,6 +46,13 @@ func Test_segReader(t *testing.T) {
 	assert.Greater(t, len(cols), 1)
 	var queryCol string
 
+	requiredCols := []string{}
+	for queryCol = range cols {
+		requiredCols = append(requiredCols, queryCol)
+	}
+
+	MultiColSegmentReader, err := InitSharedMultiColumnReaders(segKey, requiredCols, numBlocks, blockmeta, 0)
+
 	// test across multiple columns types
 	for queryCol = range cols {
 		if queryCol == config.GetTimeStampKey() {

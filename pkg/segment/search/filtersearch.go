@@ -182,7 +182,20 @@ func filterRecordsFromSearchQuery(query *structs.SearchQuery, segmentSearch *Seg
 	}
 
 	if doRecLevelSearch {
-		
+		requiredSearchCols, err := GetRequiredColsForSearchQuery(multiColReader, query, searchReq.AllPossibleColumns, deCnames, cmiPassedCnames)
+		if err != nil {
+			log.Errorf("qid=%d, ApplyColumnarSearchQuery: failed to get required cols for search query. err: %v", qid, err)
+			allSearchResults.AddError(err)
+			return
+		}
+
+		err = multiColReader.ValidatSegFileReaderBlock(requiredSearchCols, blockNum)
+		if err != nil {
+			log.Errorf("qid=%d, ApplyColumnarSearchQuery: failed to validate seg file reader for block: %v err: %v", qid, blockNum, err)
+			allSearchResults.AddError(err)
+			return
+		}
+
 		for i := uint(0); i < uint(recIT.AllRecLen); i++ {
 			if recIT.ShouldProcessRecord(i) {
 				matched, err := ApplyColumnarSearchQuery(query, multiColReader, blockNum, uint16(i), holderDte,

@@ -394,6 +394,15 @@ func rawSearchSingleSPQMR(multiReader *segread.MultiColSegmentReader, req *struc
 			log.Errorf("qid=%d, rawSearchSingleSPQMR failed to get timestamps for block %d. Number of read ts blocks %+v, segkey=%v", qid, blockNum, len(allTimestamps), req.SegmentKey)
 			continue
 		}
+		
+		if aggs != nil && aggs.Sort != nil {
+			err := multiReader.ValidatSegFileReaderBlock([]string{aggs.Sort.ColName}, blockNum)
+			if err != nil {
+				log.Errorf("qid=%d, rawSearchSingleSPQMR: failed to validate sort column %v for block %d, segkey: %v, err: %v", qid, aggs.Sort.ColName, blockNum, req.SegmentKey, err)
+				continue
+			}
+		}
+		
 		isBlkFullyEncosed := tRange.AreTimesFullyEnclosed(blkSum.LowTs, blkSum.HighTs)
 		if blkResults.ShouldIterateRecords(aggsHasTimeHt, isBlkFullyEncosed, blkSum.LowTs, blkSum.HighTs, false) {
 			for recNum := uint(0); recNum < numRecsInBlock; recNum++ {

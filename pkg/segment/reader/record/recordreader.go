@@ -233,6 +233,21 @@ func readAllRawRecords(orderedRecNums []uint16, blockIdx uint16, segReader *segr
 		mathColMap = make(map[string]int)
 	}
 
+	searchCols := []string{}
+	for _, colInfo := range segReader.AllColums {
+		_, exists := dictEncCols[colInfo.ColumnName]
+		if exists {
+			continue
+		}
+		searchCols = append(searchCols, colInfo.ColumnName)
+	}
+
+	err := segReader.ValidatSegFileReaderBlock(searchCols, blockIdx)
+	if err != nil {
+		log.Errorf("qid=%d, failed to validate seg file reader block for block %d, err=%v", qid, blockIdx, err)
+		return results
+	}
+
 	for _, recNum := range orderedRecNums {
 		_, ok := results[recNum]
 		if !ok {

@@ -19,6 +19,7 @@ package search
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/siglens/siglens/pkg/segment/reader/segread"
 	. "github.com/siglens/siglens/pkg/segment/structs"
@@ -27,21 +28,37 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func getRequiredColsForSearchQuery(sq *SearchQuery, allCols map[string]bool) []string {
+func GetRequiredColsForSearchQuery(multiColReader *segread.MultiColSegmentReader, sq *SearchQuery, allCols map[string]bool, dictEncColNames map[string]bool, cmiPassedCnames map[string]bool) ([]string, error) {
 	var searchCols []string
 	switch sq.SearchType {
-	case MatchAll, :
-		return searchCols
-	case MatchWords, MatchWordsAllColumns:
+	case MatchAll:
+		return searchCols, nil
+	case MatchWords, SimpleExpression, RegexExpression, MatchDictArraySingleColumn:
 		searchCols = append(searchCols, sq.QueryInfo.ColName)
-	case SimpleExpression, RegexExpression, SimpleExpressionAllColumns, RegexExpressionAllColumns:
-		searchCols = append(searchCols, sq.QueryInfo.ColName)
-	case MatchDictArraySingleColumn, MatchDictArrayAllColumns:
-		searchCols = append(searchCols, sq.QueryInfo.ColName)
+	case MatchWordsAllColumns:
+		for cname := range cmiPassedCnames {
+			searchCols = append(searchCols, cname)
+		}
+	case SimpleExpressionAllColumns, RegexExpressionAllColumns:
+		for cname := range cmiPassedCnames {
+			_, ok := dictEncColNames[cname]
+			if ok {
+				continue
+			}
+			searchCols = append(searchCols, cname)
+		}
+	case MatchDictArrayAllColumns:
+		for _, colInfo := range multiColReader.AllColums {
+			_, ok := dictEncColNames[colInfo.ColumnName]
+			if ok {
+				continue
+			}
+			searchCols = append(searchCols, colInfo.ColumnName)
+		}
 	default:
-		log.Errorf("getRequiredColsForSearchQuery: unsupported query type! %+v", sq.SearchType)
+		return nil, fmt.Errorf("getRequiredColsForSearchQuery: unsupported query type! %+v", sq.SearchType)
 	}
-	return searchCols
+	return searchCols, nil
 }
 
 // TODO: support for complex expressions

@@ -789,6 +789,16 @@ func segmentStatsWorker(statRes *segresults.StatsResults, mCols map[string]bool,
 		}
 		sortedMatchedRecs = sortedMatchedRecs[:idx]
 		nonDeCols := applySegmentStatsUsingDictEncoding(multiReader, sortedMatchedRecs, mCols, aggColUsage, valuesUsage, blockStatus.BlockNum, recIT, localStats, bb, qid)
+		searchCols := []string{}
+		for col := range nonDeCols {
+			searchCols = append(searchCols, col)
+		}
+		err = multiReader.ValidatSegFileReaderBlock(searchCols, blockStatus.BlockNum)
+		if err != nil {
+			log.Errorf("qid=%d, segmentStatsWorker: failed to validate column file for block %v: %v", qid, blockStatus.BlockNum, err)
+			continue
+		}
+		
 		for _, recNum := range sortedMatchedRecs {
 			for colName := range nonDeCols {
 				val, err := multiReader.ExtractValueFromColumnFile(colName, blockStatus.BlockNum, recNum, qid)
@@ -912,6 +922,14 @@ func iterRecsAddRrc(recIT *BlockRecordIterator, mcr *segread.MultiColSegmentRead
 	aggsHasTimeHt bool, addedTimeHt bool, blkResults *blockresults.BlockResults,
 	queryMetrics *structs.QueryProcessingMetrics,
 	allSearchResults *segresults.SearchResults, searchReq *structs.SegmentSearchRequest, qid uint64) {
+
+	if aggs != nil && aggs.Sort != nil {
+		err := mcr.ValidatSegFileReaderBlock([]string{aggs.Sort.ColName}, blockStatus.BlockNum)
+		if err != nil {
+			log.Errorf("qid=%d, rawSearchSingleSPQMR: failed to validate sort column %v for block %d, err: %v", qid, aggs.Sort.ColName, blockStatus.BlockNum, err)
+			return
+		}
+	}
 
 	numRecsMatched := uint16(0)
 	for recNum := uint(0); recNum < uint(recIT.AllRecLen); recNum++ {
