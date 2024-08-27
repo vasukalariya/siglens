@@ -139,6 +139,17 @@ func (n *SearchQuery) GetQueryInfo() SearchNodeType {
 	} else {
 		queryInfo = n.ExpressionFilter.GetQueryInfo()
 	}
+
+	// For PQS queries compiled regex is not being flushed, so we need to compile it here
+	if (n.SearchType == RegexExpression || n.SearchType == RegexExpressionAllColumns) && queryInfo != nil &&
+		queryInfo.QValDte != nil && queryInfo.QValDte.Dtype == utils.SS_DT_STRING && queryInfo.QValDte.GetRegexp() == nil {
+		compiledRegex, err := GetCompiledRegex(queryInfo.QValDte.StringVal, n.FilterIsCaseInsensitive)
+		if err != nil {
+			log.Errorf("SearchQuery.GetQueryInfo: Error compiling regex for query: %v", err)
+		}
+		queryInfo.QValDte.SetRegexp(compiledRegex)
+	}
+
 	n.QueryInfo = queryInfo
 	return n.GetQueryType()
 }

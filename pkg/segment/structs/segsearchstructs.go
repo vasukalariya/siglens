@@ -384,15 +384,11 @@ func extractSearchQueryFromMatchFilter(match *MatchFilter, isCaseInsensitive boo
 		currQuery.SearchType = MatchWords
 	}
 	if match.MatchPhrase != nil && bytes.Contains(match.MatchPhrase, []byte("*")) {
-		cval := dtu.ReplaceWildcardStarWithRegex(string(match.MatchPhrase))
-		if isCaseInsensitive {
-			cval = "(?i)" + cval
-		}
-		rexpC, err := regexp.Compile(cval)
+		compiledRegex, err := GetCompiledRegex(string(match.MatchPhrase), isCaseInsensitive)
 		if err != nil {
-			log.Errorf("qid=%v, extractSearchQueryFromMatchFilter: regexp compile failed for exp: %v, err: %v", qid, cval, err)
+			log.Errorf("qid=%v, extractSearchQueryFromMatchFilter: regexp compile failed for exp: %v, err: %v", qid, compiledRegex, err)
 		} else {
-			currQuery.MatchFilter.SetRegexp(rexpC)
+			currQuery.MatchFilter.SetRegexp(compiledRegex)
 		}
 	}
 
@@ -412,25 +408,32 @@ func extractSearchQueryFromExpressionFilter(exp *ExpressionFilter, isCaseInsensi
 	expType := getSearchTypeFromSearchExpression(sq.ExpressionFilter)
 	sq.SearchType = expType
 
-	if sq.SearchType == RegexExpression || sq.SearchType == RegexExpressionAllColumns {
-		if sq.ExpressionFilter.LeftSearchInput.ColumnValue != nil &&
-			sq.ExpressionFilter.LeftSearchInput.ColumnValue.Dtype == SS_DT_STRING {
-
-			// We don't need to do this with the LeftSearchInput.OriginalColumnValue, as this is a regex/wildcard
-			// And we don't do Bloom Filtering for regex/wildcard searches
-			cval := dtu.ReplaceWildcardStarWithRegex(sq.ExpressionFilter.LeftSearchInput.ColumnValue.StringVal)
-			if isCaseInsensitive {
-				cval = "(?i)" + cval
-			}
-			rexpC, err := regexp.Compile(cval)
-			if err != nil {
-				log.Errorf("extractSearchQueryFromExpressionFilter: regexp compile failed for exp: %v, err: %v", cval, err)
-			} else {
-				sq.ExpressionFilter.LeftSearchInput.ColumnValue.SetRegexp(rexpC)
-			}
+	if (sq.SearchType == RegexExpression || sq.SearchType == RegexExpressionAllColumns) &&
+		sq.ExpressionFilter.LeftSearchInput.ColumnValue != nil &&
+		sq.ExpressionFilter.LeftSearchInput.ColumnValue.Dtype == SS_DT_STRING {
+		// We don't need to do this with the LeftSearchInput.OriginalColumnValue, as this is a regex/wildcard
+		// And we don't do Bloom Filtering for regex/wildcard searches
+		compiledRegex, err := GetCompiledRegex(sq.ExpressionFilter.LeftSearchInput.ColumnValue.StringVal, isCaseInsensitive)
+		if err != nil {
+			log.Errorf("qid=%v, extractSearchQueryFromExpressionFilter: Error compiling regex: %v", qid, err)
+		} else {
+			sq.ExpressionFilter.LeftSearchInput.ColumnValue.SetRegexp(compiledRegex)
 		}
 	}
 	return sq
+}
+
+func GetCompiledRegex(value string, isCaseInsensitive bool) (*regexp.Regexp, error) {
+	cval := dtu.ReplaceWildcardStarWithRegex(value)
+	if isCaseInsensitive {
+		cval = "(?i)" + cval
+	}
+	rexpC, err := regexp.Compile(cval)
+	if err != nil {
+		return nil, fmt.Errorf("extractSearchQueryFromExpressionFilter: regexp compile failed for exp: %v, err: %v", cval, err)
+	}
+
+	return rexpC, nil
 }
 
 func getSearchTypeFromSearchExpression(searchExp *SearchExpression) SearchQueryType {
