@@ -27,9 +27,10 @@ import (
 	"github.com/google/uuid"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/siglens/siglens/pkg/ast/pipesearch"
-	"github.com/siglens/siglens/pkg/blob"
+
+	// "github.com/siglens/siglens/pkg/blob"
 	dtu "github.com/siglens/siglens/pkg/common/dtypeutils"
-	"github.com/siglens/siglens/pkg/common/fileutils"
+	// "github.com/siglens/siglens/pkg/common/fileutils"
 	"github.com/siglens/siglens/pkg/config"
 	"github.com/siglens/siglens/pkg/querytracker"
 	"github.com/siglens/siglens/pkg/segment"
@@ -560,52 +561,52 @@ func Benchmark_E2E_AgileTree(b *testing.B) {
 
 }
 
-func Benchmark_S3_segupload(b *testing.B) {
-	config.InitializeTestingConfig(b.TempDir())
+// func Benchmark_S3_segupload(b *testing.B) {
+// 	config.InitializeTestingConfig(b.TempDir())
 
-	config.SetS3Enabled(true)
-	config.SetS3BucketName("knawale-test")
-	config.SetS3Region("us-east-1")
+// 	config.SetS3Enabled(true)
+// 	config.SetS3BucketName("knawale-test")
+// 	config.SetS3Region("us-east-1")
 
-	count := 10
-	allTimes := make([]time.Duration, count)
-	timeSum := float64(0)
+// 	count := 10
+// 	allTimes := make([]time.Duration, count)
+// 	timeSum := float64(0)
 
-	err := blob.InitBlobStore()
-	if err != nil {
-		log.Errorf("Benchmark_S3_segupload: Error initializing S3: %v", err)
-		return
-	}
+// 	err := blob.InitBlobStore()
+// 	if err != nil {
+// 		log.Errorf("Benchmark_S3_segupload: Error initializing S3: %v", err)
+// 		return
+// 	}
 
-	finalBasedir := "ingest0data/ip-172-31-15-17.ec2.internal.AU2LfLWt3UXZtQwswR76PV/final/ind-0/0-0-3544697602014606120/7/"
-	filesToUpload := fileutils.GetAllFilesInDirectory(finalBasedir)
+// 	finalBasedir := "ingest0data/ip-172-31-15-17.ec2.internal.AU2LfLWt3UXZtQwswR76PV/final/ind-0/0-0-3544697602014606120/7/"
+// 	filesToUpload := fileutils.GetAllFilesInDirectory(finalBasedir)
 
-	log.Infof("Benchmark_S3_segupload: uploading %v files", len(filesToUpload))
-	b.ResetTimer()
-	for i := 0; i < count; i++ {
-		sTime := time.Now()
+// 	log.Infof("Benchmark_S3_segupload: uploading %v files", len(filesToUpload))
+// 	b.ResetTimer()
+// 	for i := 0; i < count; i++ {
+// 		sTime := time.Now()
 
-		err := blob.UploadSegmentFiles(filesToUpload)
-		if err != nil {
-			log.Errorf("Benchmark_S3_segupload: failed to upload segment files , err=%v", err)
-		}
-		elapTime := time.Since(sTime)
-		allTimes[i] = elapTime
-		if i != 0 {
-			timeSum += elapTime.Seconds()
-		}
-	}
-	log.Infof("Finished benchmark: allTimes: %v", allTimes)
-	log.Infof("Average time: %v", timeSum/float64(count))
+// 		err := blob.UploadSegmentFiles(filesToUpload)
+// 		if err != nil {
+// 			log.Errorf("Benchmark_S3_segupload: failed to upload segment files , err=%v", err)
+// 		}
+// 		elapTime := time.Since(sTime)
+// 		allTimes[i] = elapTime
+// 		if i != 0 {
+// 			timeSum += elapTime.Seconds()
+// 		}
+// 	}
+// 	log.Infof("Finished benchmark: allTimes: %v", allTimes)
+// 	log.Infof("Average time: %v", timeSum/float64(count))
 
-	/*
-	   go test -run=Bench -bench=Benchmark_S3_segupload  -cpuprofile cpuprofile.out -o rawsearch_cpu
-	   go tool pprof ./rawsearch_cpu cpuprofile.out
+// 	/*
+// 	   go test -run=Bench -bench=Benchmark_S3_segupload  -cpuprofile cpuprofile.out -o rawsearch_cpu
+// 	   go tool pprof ./rawsearch_cpu cpuprofile.out
 
-	   (for mem profile)
-	   go test -run=Bench -bench=Benchmark_S3_segupload -benchmem -memprofile memprofile.out -o rawsearch_mem
-	   go tool pprof ./rawsearch_mem memprofile.out
+// 	   (for mem profile)
+// 	   go test -run=Bench -bench=Benchmark_S3_segupload -benchmem -memprofile memprofile.out -o rawsearch_mem
+// 	   go tool pprof ./rawsearch_mem memprofile.out
 
-	*/
+// 	*/
 
-}
+// }

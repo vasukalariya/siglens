@@ -110,6 +110,10 @@ func Main() {
 		getNodeIdHook = localnodeid.GetRunningNodeID
 	}
 
+	if nodeType == commonconfig.SingleNodeS3 {
+		config.GetRunningConfig().RemoteStorage = true
+	}
+
 	nodeID := getNodeIdHook()
 	err = config.InitDerivedConfig(nodeID)
 	if err != nil {

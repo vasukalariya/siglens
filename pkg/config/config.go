@@ -118,34 +118,6 @@ func GetRetentionHours() int {
 	return runningConfig.RetentionHours
 }
 
-func IsS3Enabled() bool {
-	return runningConfig.S3.Enabled
-}
-
-func SetS3Enabled(flag bool) {
-	runningConfig.S3.Enabled = flag
-}
-
-func GetS3BucketName() string {
-	return runningConfig.S3.BucketName
-}
-
-func SetS3BucketName(bname string) {
-	runningConfig.S3.BucketName = bname
-}
-
-func GetS3Region() string {
-	return runningConfig.S3.RegionName
-}
-
-func SetS3Region(region string) {
-	runningConfig.S3.RegionName = region
-}
-
-func GetS3BucketPrefix() string {
-	return runningConfig.S3.BucketPrefix
-}
-
 func GetMaxSegFileSize() *uint64 {
 	return &runningConfig.MaxSegFileSize
 }
@@ -327,19 +299,8 @@ func GetMaxParallelS3IngestBuffers() uint64 {
 	return runningConfig.MaxParallelS3IngestBuffers
 }
 
-// returns a map of s3 config
-func GetS3ConfigMap() map[string]interface{} {
-	data, err := json.Marshal(runningConfig.S3)
-	if err != nil {
-		return map[string]interface{}{}
-	}
-
-	var newMap map[string]interface{}
-	err = json.Unmarshal(data, &newMap)
-	if err != nil {
-		return map[string]interface{}{}
-	}
-	return newMap
+func IsRemoteStorageEnabled() bool {
+	return runningConfig.RemoteStorage
 }
 
 func IsIngestNode() bool {
@@ -427,9 +388,6 @@ func SetQueryPort(value uint64) {
 
 func ValidateDeployment() (common.DeploymentType, error) {
 	if IsQueryNode() && IsIngestNode() {
-		if runningConfig.S3.Enabled {
-			return common.SingleNodeS3, nil
-		}
 		return common.SingleNode, nil
 	}
 	return 0, fmt.Errorf("ValidateDeployment: single node deployment must have both query and ingest in the same node")
@@ -507,37 +465,37 @@ func GetTestConfig(dataPath string) common.Configuration {
 		IdleWipFlushIntervalSecs:    5,
 		MaxWaitWipFlushIntervalSecs: 30,
 		DataPath:                    dataPath,
-		S3:                          common.S3Config{Enabled: false, BucketName: "", BucketPrefix: "", RegionName: ""},
-		RetentionHours:              24 * 90,
-		TimeStampKey:                "timestamp",
-		MaxSegFileSize:              4_294_967_296,
-		LicenseKeyPath:              "./",
-		ESVersion:                   "",
-		Debug:                       false,
-		MemoryThresholdPercent:      80,
-		DataDiskThresholdPercent:    85,
-		S3IngestQueueName:           "",
-		S3IngestQueueRegion:         "",
-		S3IngestBufferSize:          1000,
-		MaxParallelS3IngestBuffers:  10,
-		SSInstanceName:              "",
-		PQSEnabled:                  "false",
-		PQSEnabledConverted:         false,
-		SafeServerStart:             false,
-		AnalyticsEnabled:            "false",
-		AnalyticsEnabledConverted:   false,
-		AgileAggsEnabled:            "true",
-		AgileAggsEnabledConverted:   true,
-		DualCaseCheck:               "false",
-		DualCaseCheckConverted:      false,
-		QueryHostname:               "",
-		Log:                         common.LogConfig{LogPrefix: "", LogFileRotationSizeMB: 100, CompressLogFile: false},
-		TLS:                         common.TLSConfig{Enabled: false, CertificatePath: "", PrivateKeyPath: ""},
-		CompressStatic:              "false",
-		CompressStaticConverted:     false,
-		Tracing:                     common.TracingConfig{ServiceName: "", Endpoint: "", SamplingPercentage: 1},
-		DatabaseConfig:              common.DatabaseConfig{Enabled: true, Provider: "sqlite"},
-		EmailConfig:                 common.EmailConfig{SmtpHost: "smtp.gmail.com", SmtpPort: 587, SenderEmail: "doe1024john@gmail.com", GmailAppPassword: " "},
+
+		RetentionHours:             24 * 90,
+		TimeStampKey:               "timestamp",
+		MaxSegFileSize:             4_294_967_296,
+		LicenseKeyPath:             "./",
+		ESVersion:                  "",
+		Debug:                      false,
+		MemoryThresholdPercent:     80,
+		DataDiskThresholdPercent:   85,
+		S3IngestQueueName:          "",
+		S3IngestQueueRegion:        "",
+		S3IngestBufferSize:         1000,
+		MaxParallelS3IngestBuffers: 10,
+		SSInstanceName:             "",
+		PQSEnabled:                 "false",
+		PQSEnabledConverted:        false,
+		SafeServerStart:            false,
+		AnalyticsEnabled:           "false",
+		AnalyticsEnabledConverted:  false,
+		AgileAggsEnabled:           "true",
+		AgileAggsEnabledConverted:  true,
+		DualCaseCheck:              "false",
+		DualCaseCheckConverted:     false,
+		QueryHostname:              "",
+		Log:                        common.LogConfig{LogPrefix: "", LogFileRotationSizeMB: 100, CompressLogFile: false},
+		TLS:                        common.TLSConfig{Enabled: false, CertificatePath: "", PrivateKeyPath: ""},
+		CompressStatic:             "false",
+		CompressStaticConverted:    false,
+		Tracing:                    common.TracingConfig{ServiceName: "", Endpoint: "", SamplingPercentage: 1},
+		DatabaseConfig:             common.DatabaseConfig{Enabled: true, Provider: "sqlite"},
+		EmailConfig:                common.EmailConfig{SmtpHost: "smtp.gmail.com", SmtpPort: 587, SenderEmail: "doe1024john@gmail.com", GmailAppPassword: " "},
 	}
 
 	return testConfig
@@ -708,25 +666,6 @@ func ExtractConfigData(yamlData []byte) (common.Configuration, error) {
 
 	if len(config.IngestUrl) <= 0 {
 		config.IngestUrl = "http://localhost:" + strconv.FormatUint(config.IngestPort, 10)
-	}
-
-	if !config.S3.Enabled {
-		config.S3.Enabled = false
-	}
-
-	if len(config.S3.BucketName) <= 0 {
-		config.S3.BucketName = ""
-	}
-	if len(config.S3.RegionName) <= 0 {
-		config.S3.RegionName = ""
-	}
-	if len(config.S3.BucketPrefix) <= 0 {
-		config.S3.BucketPrefix = ""
-	} else {
-		if config.S3.BucketPrefix[len(config.S3.BucketPrefix)-1:] != "/" {
-			config.S3.BucketPrefix = config.S3.BucketPrefix + "/"
-		}
-
 	}
 
 	if config.RetentionHours == 0 || config.RetentionHours > 15*24 {

@@ -62,7 +62,7 @@ func InitLocalStorage() error {
 	}
 
 	// only if s3 is enabled & we are uploading to s3 should we start up the cleaner
-	if config.IsS3Enabled() {
+	if config.IsRemoteStorageEnabled() {
 		initLocalCleaner()
 	}
 	go persistSegSetKeysOnInterval()

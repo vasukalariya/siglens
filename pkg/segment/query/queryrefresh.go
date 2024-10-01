@@ -121,7 +121,7 @@ func updateVTable(vfname string, orgid uint64) error {
 }
 
 func initGlobalMetadataRefresh(getMyIds func() []uint64) {
-	if !config.IsQueryNode() || !config.IsS3Enabled() {
+	if !config.IsQueryNode() || !config.IsRemoteStorageEnabled() {
 		return
 	}
 
