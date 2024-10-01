@@ -285,20 +285,6 @@ func GetTimeStampKey() string {
 	return runningConfig.TimeStampKey
 }
 
-func GetS3IngestQueueName() string {
-	return runningConfig.S3IngestQueueName
-}
-
-func GetS3IngestQueueRegion() string {
-	return runningConfig.S3IngestQueueRegion
-}
-func GetS3IngestBufferSize() uint64 {
-	return runningConfig.S3IngestBufferSize
-}
-func GetMaxParallelS3IngestBuffers() uint64 {
-	return runningConfig.MaxParallelS3IngestBuffers
-}
-
 func IsRemoteStorageEnabled() bool {
 	return runningConfig.RemoteStorage
 }
@@ -374,9 +360,6 @@ func SetDataDiskThresholdPercent(percent uint64) {
 	runningConfig.DataDiskThresholdPercent = percent
 }
 
-func SetMaxParallelS3IngestBuffers(maxBuf uint64) {
-	runningConfig.MaxParallelS3IngestBuffers = maxBuf
-}
 func SetPQSEnabled(enabled bool) {
 	runningConfig.PQSEnabledConverted = enabled
 	runningConfig.PQSEnabled = strconv.FormatBool(enabled)
@@ -466,36 +449,32 @@ func GetTestConfig(dataPath string) common.Configuration {
 		MaxWaitWipFlushIntervalSecs: 30,
 		DataPath:                    dataPath,
 
-		RetentionHours:             24 * 90,
-		TimeStampKey:               "timestamp",
-		MaxSegFileSize:             4_294_967_296,
-		LicenseKeyPath:             "./",
-		ESVersion:                  "",
-		Debug:                      false,
-		MemoryThresholdPercent:     80,
-		DataDiskThresholdPercent:   85,
-		S3IngestQueueName:          "",
-		S3IngestQueueRegion:        "",
-		S3IngestBufferSize:         1000,
-		MaxParallelS3IngestBuffers: 10,
-		SSInstanceName:             "",
-		PQSEnabled:                 "false",
-		PQSEnabledConverted:        false,
-		SafeServerStart:            false,
-		AnalyticsEnabled:           "false",
-		AnalyticsEnabledConverted:  false,
-		AgileAggsEnabled:           "true",
-		AgileAggsEnabledConverted:  true,
-		DualCaseCheck:              "false",
-		DualCaseCheckConverted:     false,
-		QueryHostname:              "",
-		Log:                        common.LogConfig{LogPrefix: "", LogFileRotationSizeMB: 100, CompressLogFile: false},
-		TLS:                        common.TLSConfig{Enabled: false, CertificatePath: "", PrivateKeyPath: ""},
-		CompressStatic:             "false",
-		CompressStaticConverted:    false,
-		Tracing:                    common.TracingConfig{ServiceName: "", Endpoint: "", SamplingPercentage: 1},
-		DatabaseConfig:             common.DatabaseConfig{Enabled: true, Provider: "sqlite"},
-		EmailConfig:                common.EmailConfig{SmtpHost: "smtp.gmail.com", SmtpPort: 587, SenderEmail: "doe1024john@gmail.com", GmailAppPassword: " "},
+		RetentionHours:            24 * 90,
+		TimeStampKey:              "timestamp",
+		MaxSegFileSize:            4_294_967_296,
+		LicenseKeyPath:            "./",
+		ESVersion:                 "",
+		Debug:                     false,
+		MemoryThresholdPercent:    80,
+		DataDiskThresholdPercent:  85,
+		SSInstanceName:            "",
+		PQSEnabled:                "false",
+		PQSEnabledConverted:       false,
+		SafeServerStart:           false,
+		AnalyticsEnabled:          "false",
+		AnalyticsEnabledConverted: false,
+		AgileAggsEnabled:          "true",
+		AgileAggsEnabledConverted: true,
+		DualCaseCheck:             "false",
+		DualCaseCheckConverted:    false,
+		QueryHostname:             "",
+		Log:                       common.LogConfig{LogPrefix: "", LogFileRotationSizeMB: 100, CompressLogFile: false},
+		TLS:                       common.TLSConfig{Enabled: false, CertificatePath: "", PrivateKeyPath: ""},
+		CompressStatic:            "false",
+		CompressStaticConverted:   false,
+		Tracing:                   common.TracingConfig{ServiceName: "", Endpoint: "", SamplingPercentage: 1},
+		DatabaseConfig:            common.DatabaseConfig{Enabled: true, Provider: "sqlite"},
+		EmailConfig:               common.EmailConfig{SmtpHost: "smtp.gmail.com", SmtpPort: 587, SenderEmail: "doe1024john@gmail.com", GmailAppPassword: " "},
 	}
 
 	return testConfig
@@ -709,21 +688,6 @@ func ExtractConfigData(yamlData []byte) (common.Configuration, error) {
 
 	if config.MemoryThresholdPercent == 0 {
 		config.MemoryThresholdPercent = 80
-	}
-
-	if len(config.S3IngestQueueName) <= 0 {
-		config.S3IngestQueueName = ""
-	}
-	if len(config.S3IngestQueueRegion) <= 0 {
-		config.S3IngestQueueRegion = ""
-	}
-
-	if config.MaxParallelS3IngestBuffers == 0 {
-		config.MaxParallelS3IngestBuffers = 10
-	}
-
-	if config.S3IngestBufferSize == 0 {
-		config.S3IngestBufferSize = 1000
 	}
 
 	if config.QueryHostname == "" {

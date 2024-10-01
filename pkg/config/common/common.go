@@ -99,10 +99,6 @@ type Configuration struct {
 	Debug                       bool     `yaml:"debug"`                  // debug logging
 	MemoryThresholdPercent      uint64   `yaml:"memoryThresholdPercent"` // percent of all available free data allocated for loading micro indices in memory
 	DataDiskThresholdPercent    uint64   `yaml:"dataDiskThresholdPercent"`
-	S3IngestQueueName           string   `yaml:"s3IngestQueueName"`
-	S3IngestQueueRegion         string   `yaml:"s3IngestQueueRegion"`
-	S3IngestBufferSize          uint64   `yaml:"s3IngestBufferSize"`
-	MaxParallelS3IngestBuffers  uint64   `yaml:"maxParallelS3IngestBuffers"`
 	SSInstanceName              string   `yaml:"ssInstanceName"`
 	PQSEnabled                  string   `yaml:"pqsEnabled"` // is pqs enabled?
 	PQSEnabledConverted         bool     // converted bool value of PQSEnabled yaml
