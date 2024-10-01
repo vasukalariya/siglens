@@ -111,7 +111,7 @@ func Main() {
 	}
 
 	if nodeType == commonconfig.SingleNodeS3 {
-		config.GetRunningConfig().RemoteStorage = true
+		config.SetRemoteStorageEnabled(true)
 	}
 
 	nodeID := getNodeIdHook()

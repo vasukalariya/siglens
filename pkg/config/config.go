@@ -289,6 +289,10 @@ func IsRemoteStorageEnabled() bool {
 	return runningConfig.RemoteStorage
 }
 
+func SetRemoteStorageEnabled(enabled bool) {
+	runningConfig.RemoteStorage = enabled
+}
+
 func IsIngestNode() bool {
 	retVal, err := strconv.ParseBool(runningConfig.IngestNode)
 	if err != nil {
@@ -448,33 +452,32 @@ func GetTestConfig(dataPath string) common.Configuration {
 		IdleWipFlushIntervalSecs:    5,
 		MaxWaitWipFlushIntervalSecs: 30,
 		DataPath:                    dataPath,
-
-		RetentionHours:            24 * 90,
-		TimeStampKey:              "timestamp",
-		MaxSegFileSize:            4_294_967_296,
-		LicenseKeyPath:            "./",
-		ESVersion:                 "",
-		Debug:                     false,
-		MemoryThresholdPercent:    80,
-		DataDiskThresholdPercent:  85,
-		SSInstanceName:            "",
-		PQSEnabled:                "false",
-		PQSEnabledConverted:       false,
-		SafeServerStart:           false,
-		AnalyticsEnabled:          "false",
-		AnalyticsEnabledConverted: false,
-		AgileAggsEnabled:          "true",
-		AgileAggsEnabledConverted: true,
-		DualCaseCheck:             "false",
-		DualCaseCheckConverted:    false,
-		QueryHostname:             "",
-		Log:                       common.LogConfig{LogPrefix: "", LogFileRotationSizeMB: 100, CompressLogFile: false},
-		TLS:                       common.TLSConfig{Enabled: false, CertificatePath: "", PrivateKeyPath: ""},
-		CompressStatic:            "false",
-		CompressStaticConverted:   false,
-		Tracing:                   common.TracingConfig{ServiceName: "", Endpoint: "", SamplingPercentage: 1},
-		DatabaseConfig:            common.DatabaseConfig{Enabled: true, Provider: "sqlite"},
-		EmailConfig:               common.EmailConfig{SmtpHost: "smtp.gmail.com", SmtpPort: 587, SenderEmail: "doe1024john@gmail.com", GmailAppPassword: " "},
+		RetentionHours:              24 * 90,
+		TimeStampKey:                "timestamp",
+		MaxSegFileSize:              4_294_967_296,
+		LicenseKeyPath:              "./",
+		ESVersion:                   "",
+		Debug:                       false,
+		MemoryThresholdPercent:      80,
+		DataDiskThresholdPercent:    85,
+		SSInstanceName:              "",
+		PQSEnabled:                  "false",
+		PQSEnabledConverted:         false,
+		SafeServerStart:             false,
+		AnalyticsEnabled:            "false",
+		AnalyticsEnabledConverted:   false,
+		AgileAggsEnabled:            "true",
+		AgileAggsEnabledConverted:   true,
+		DualCaseCheck:               "false",
+		DualCaseCheckConverted:      false,
+		QueryHostname:               "",
+		Log:                         common.LogConfig{LogPrefix: "", LogFileRotationSizeMB: 100, CompressLogFile: false},
+		TLS:                         common.TLSConfig{Enabled: false, CertificatePath: "", PrivateKeyPath: ""},
+		CompressStatic:              "false",
+		CompressStaticConverted:     false,
+		Tracing:                     common.TracingConfig{ServiceName: "", Endpoint: "", SamplingPercentage: 1},
+		DatabaseConfig:              common.DatabaseConfig{Enabled: true, Provider: "sqlite"},
+		EmailConfig:                 common.EmailConfig{SmtpHost: "smtp.gmail.com", SmtpPort: 587, SenderEmail: "doe1024john@gmail.com", GmailAppPassword: " "},
 	}
 
 	return testConfig
