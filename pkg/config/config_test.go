@@ -47,11 +47,6 @@ func Test_ExtractConfigData(t *testing.T) {
  segreaderNode: true
  metareaderNode: true
  DataPath: "data/"
- s3:
-  enabled: true
-  bucketName: "test-1"
-  bucketPrefix: ""
-  regionName: "us-east-1"
  retentionHours: 90
  TimeStampKey: "timestamp"
  maxSegFileSize: 10
@@ -65,10 +60,6 @@ func Test_ExtractConfigData(t *testing.T) {
  partitionCountConsistentHasher: 271
  replicationFactorConsistentHasher: 40
  loadConsistentHasher: 1.2
- s3IngestQueueName: ""
- s3IngestQueueRegion: ""
- s3IngestBufferSize: 1000
- maxParallelS3IngestBuffers: 10
  queryHostname: "abc:123"
  PQSEnabled: bad string
  analyticsEnabled: false
@@ -144,10 +135,6 @@ func Test_ExtractConfigData(t *testing.T) {
  partitionCountConsistentHasher: 271
  replicationFactorConsistentHasher: 40
  loadConsistentHasher: 1.2
- S3IngestQueueName: ""
- S3IngestQueueRegion: ""
- S3IngestBufferSize: 1000
- MaxParallelS3IngestBuffers: 10
  PQSEnabled: F
  dualCaseCheck: true
  analyticsEnabled: bad string
