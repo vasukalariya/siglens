@@ -39,6 +39,7 @@ import (
 )
 
 const MAXIMUM_WARNINGS_COUNT = 5
+const RETENTION_CHECK_INTERVAL = 15 * time.Minute
 
 // Starting the periodic retention based deletion
 func InitRetentionCleaner() error {
@@ -63,7 +64,7 @@ func internalRetentionCleaner() {
 
 	deletionWarningCounter := 0
 	for {
-		time.Sleep(1 * time.Hour)
+		time.Sleep(RETENTION_CHECK_INTERVAL)
 		if hook := hooks.GlobalHooks.InternalRetentionCleanerHook2; hook != nil {
 			hook(hook1Result, deletionWarningCounter)
 		} else {
