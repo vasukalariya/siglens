@@ -1,15 +1,6 @@
-abc.json
-
-// Queries not working for multi-index
-9stats_groupby_2col.json
-complex_search_2.json
-gentimes.json
-inputlookup.json
-inputlookup_2.json
-inputlookup_3.json
-bin.json
-
-
+aggs_streamstats.json
+stats_streamstats.json
+streamstats_eval.json
 3stats.json
 9stats.json
 complex_search.json
@@ -22,3 +13,18 @@ streamstats_3.json
 streamstats_4.json
 streamstats_5.json
 streamstats_6.json
+streamstats_7.json
+
+
+
+// Queries not working for multi-index
+9stats_groupby_2col.json
+complex_search_2.json
+gentimes.json
+inputlookup.json
+inputlookup_2.json
+inputlookup_3.json
+bin.json
+
+
+
