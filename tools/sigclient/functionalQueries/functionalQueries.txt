@@ -6,6 +6,9 @@ grpby_1col_4stats.json
 search_1col_fields.json
 streamstats.json
 streamstats_2.json
+streamstats_3.json
+streamstats_4.json
+streamstats_5.json
 
 // Queries not working for multi-index
 9stats_groupby_2col.json
