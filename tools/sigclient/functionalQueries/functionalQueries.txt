@@ -4,7 +4,7 @@ complex_search.json
 eval_groupby_2col_2stats.json
 grpby_1col_4stats.json
 search_1col_fields.json
-bin.json
+streamstats.json
 
 // Queries not working for multi-index
 9stats_groupby_2col.json
@@ -13,3 +13,4 @@ gentimes.json
 inputlookup.json
 inputlookup_2.json
 inputlookup_3.json
+bin.json

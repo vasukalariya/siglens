@@ -86,6 +86,32 @@
                 "http_status": 404,
                 "ident": "9e2b2977-0ce9-42e1-b4d7-bf79cad9081b"
             }
+        ],
+        "allColumns": [
+            "bin_http",
+            "bin_http_2",
+            "bin_http_3",
+            "bin_http_4",
+            "bin_http_5",
+            "bin_http_6",
+            "bin_http_7",
+            "bin_http_8",
+            "bin_http_9",
+            "http_status",
+            "ident"
+        ],
+        "columnsOrder": [
+            "bin_http",
+            "bin_http_2",
+            "bin_http_3",
+            "bin_http_4",
+            "bin_http_5",
+            "bin_http_6",
+            "bin_http_7",
+            "bin_http_8",
+            "bin_http_9",
+            "http_status",
+            "ident"
         ]
      }
  }
