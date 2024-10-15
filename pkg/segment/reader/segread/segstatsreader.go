@@ -90,8 +90,8 @@ func ReadSegStats(segkey string, qid uint64) (map[string]*structs.SegStats, erro
 		// actual sst
 		sst, err := readSingleSst(fdata[rIdx:rIdx+sstlen], qid)
 		if err != nil {
-			log.Errorf("qid=%d, ReadSegStats: error reading single sst for cname: %v, err: %v",
-				qid, cname, err)
+			log.Errorf("qid=%d, ReadSegStats: error reading single sst for cname: %v, fName: %v, err: %v",
+				qid, cname, fName, err)
 			return retVal, err
 		}
 		rIdx += uint32(sstlen)
@@ -101,6 +101,10 @@ func ReadSegStats(segkey string, qid uint64) (map[string]*structs.SegStats, erro
 }
 
 func readSingleSst(fdata []byte, qid uint64) (*structs.SegStats, error) {
+
+	if len(fdata) == 0 {
+		return nil, fmt.Errorf("readSingleSst: empty sst data")
+	}
 
 	sst := structs.SegStats{}
 
