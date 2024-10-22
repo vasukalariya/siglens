@@ -310,7 +310,9 @@ func GetNodeResultsFromQSRS(sortedQSRSlice []*QuerySegmentRequest, queryInfo *Qu
 		}
 	}
 	querySummary.UpdateQueryTotalTime(time.Since(sTime), allSegFileResults.GetNumBuckets())
-	SetQidAsFinished(queryInfo.qid)
+	if !config.IsNewQueryPipelineEnabled() {
+		SetQidAsFinished(queryInfo.qid)
+	}
 	queryType := GetQueryType(queryInfo.qid)
 	bucketLimit := MAX_GRP_BUCKS
 	if queryInfo.aggs != nil {

@@ -251,7 +251,7 @@ func IncrementNumFinishedSegments(incr int, qid uint64, recsSearched uint64,
 		}
 	}
 	rQuery.rqsLock.Unlock()
-	if rQuery.isAsync {
+	if rQuery.isAsync && !config.IsNewQueryPipelineEnabled() {
 		var queryUpdate QueryUpdate
 		if remoteId != "" {
 			queryUpdate = QueryUpdate{
@@ -975,4 +975,26 @@ func GetPipeResp(qid uint64) *structs.PipeSearchResponseOuter {
 	rQuery.rqsLock.Lock()
 	defer rQuery.rqsLock.Unlock()
 	return rQuery.pipeResp
+}
+
+// This sets RawSearchIsFinished to true and sends a COMPLETE message to the query's StateChan
+// If there are no aggregations
+func SetQidAsFinishedForPipeRespQuery(qid uint64) {
+	arqMapLock.RLock()
+	rQuery, ok := allRunningQueries[qid]
+	arqMapLock.RUnlock()
+	if !ok {
+		log.Errorf("SetQidAsFinishedForPipeRespQuery: qid %+v does not exist!", qid)
+		return
+	}
+
+	rQuery.rqsLock.Lock()
+	rQuery.rawSearchIsFinished = true
+	rQuery.rqsLock.Unlock()
+
+	// Only async queries need to send COMPLETE, but if we need to do post
+	// aggregations, we'll send COMPLETE once we're done with those.
+	if rQuery.isAsync {
+		rQuery.StateChan <- &QueryStateChanData{StateName: COMPLETE}
+	}
 }
