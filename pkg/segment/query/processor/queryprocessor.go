@@ -20,6 +20,7 @@ package processor
 import (
 	"fmt"
 	"io"
+	"math"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -115,12 +116,7 @@ func NewQueryProcessor(firstAgg *structs.QueryAggregators, queryInfo *query.Quer
 	}
 
 	if len(dataProcessors) > 0 && dataProcessors[0].IsDataGenerator() {
-		queryProcessor.generatedData = true
-		getTotalRecords, err := dataProcessors[0].GetTotalRecordsForDataGenerator()
-		if err != nil {
-			return nil, utils.TeeErrorf("NewQueryProcessor: failed to get total records for data generator; err: %v", err)
-		}
-		query.InitProgressForRRCCmd(getTotalRecords, searcher.qid) // TODO: Find a good way to handle data generators for progress
+		query.InitProgressForRRCCmd(math.MaxUint64, searcher.qid) // TODO: Find a good way to handle data generators for progress
 		dataProcessors[0].CheckAndSetQidForDataGenerator(searcher.qid)
 		dataProcessors[0].SetLimitForDataGenerator(segutils.QUERY_EARLY_EXIT_LIMIT + uint64(scrollFrom))
 	}
