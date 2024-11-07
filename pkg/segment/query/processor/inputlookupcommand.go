@@ -41,6 +41,8 @@ type inputlookupProcessor struct {
 	start        uint64
 	numprocessed uint64
 	limit        uint64
+	foundTotalRecords bool
+	totalRecords uint64
 }
 
 func isCSVFormat(filename string) bool {
@@ -199,4 +201,57 @@ func (p *inputlookupProcessor) GetFinalResultIfExists() (*iqr.IQR, bool) {
 
 func (p *inputlookupProcessor) IsEOF() bool {
 	return p.eof
+}
+
+func (p *inputlookupProcessor) GetTotalRecords() (uint64, error) {
+	if p.foundTotalRecords {
+		return p.totalRecords, nil
+	}
+
+	filename := p.options.Filename
+	
+	if !isCSVFormat(filename) {
+		return 0, fmt.Errorf("inputlookupProcessor.GetTotalRecords: Only .csv and .csv.gz formats are currently supported")
+	}
+
+	filePath := filepath.Join(config.GetLookupPath(), filename)
+
+	fd, err := os.Open(filePath)
+	if err != nil {
+		return 0, fmt.Errorf("inputlookupProcessor.GetTotalRecords: Error while opening file %v, err: %v", filePath, err)
+	}
+	defer fd.Close()
+
+	var reader *csv.Reader
+	if strings.HasSuffix(filename, ".csv.gz") {
+		gzipReader, err := gzip.NewReader(fd)
+		if err != nil {
+			return 0, fmt.Errorf("inputlookupProcessor.GetTotalRecords: Error while creating gzip reader, err: %v", err)
+		}
+		defer gzipReader.Close()
+		reader = csv.NewReader(gzipReader)
+	} else {
+		reader = csv.NewReader(fd)
+	}
+
+	// read columns from first row of csv file
+	_, err = reader.Read()
+	if err != nil {
+		return 0, fmt.Errorf("inputlookupProcessor.GetTotalRecords: Error reading column names, err: %v", err)
+	}
+
+	p.totalRecords = uint64(0)
+	for {
+		_, err := reader.Read()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return 0, fmt.Errorf("inputlookupProcessor.GetTotalRecords: Error reading record, err: %v", err)
+		}
+		p.totalRecords++
+	}
+	p.foundTotalRecords = true
+
+	return p.totalRecords, nil
 }

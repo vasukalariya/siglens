@@ -72,6 +72,27 @@ func IsSubseconds(timeUnit TimeUnit) bool {
 	}
 }
 
+func GetTimeUnitInMilli(timeUnit TimeUnit) (uint64, error) {
+	switch timeUnit {
+	case TMMillisecond:
+		return 1, nil
+	case TMCentisecond:
+		return 10, nil
+	case TMDecisecond:
+		return 100, nil
+	case TMSecond:
+		return 1000, nil
+	case TMMinute:
+		return 60_000, nil
+	case TMHour:
+		return 3600_000, nil
+	case TMDay:
+		return 86_400_000, nil
+	default:
+		return 0, fmt.Errorf("GetTimeUnitInMilli: can not convert: %v", timeUnit)
+	}
+}
+
 // Common method to apply offsets to time
 func ApplyOffsetToTime(num int64, unit TimeUnit, t time.Time) (time.Time, error) {
 

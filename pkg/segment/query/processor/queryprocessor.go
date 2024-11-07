@@ -20,7 +20,6 @@ package processor
 import (
 	"fmt"
 	"io"
-	"math"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -51,6 +50,7 @@ type QueryProcessor struct {
 	querySummary *summary.QuerySummary
 	queryInfo    *query.QueryInformation
 	startTime    time.Time
+	generatedData bool
 }
 
 func (qp *QueryProcessor) Cleanup() {
@@ -96,12 +96,6 @@ func NewQueryProcessor(firstAgg *structs.QueryAggregators, queryInfo *query.Quer
 		dataProcessors = append(dataProcessors, dataProcessor)
 	}
 
-	if len(dataProcessors) > 0 && dataProcessors[0].IsDataGenerator() {
-		query.InitProgressForRRCCmd(math.MaxUint64, searcher.qid) // TODO: Find a good way to handle data generators for progress
-		dataProcessors[0].CheckAndSetQidForDataGenerator(searcher.qid)
-		dataProcessors[0].SetLimitForDataGenerator(segutils.QUERY_EARLY_EXIT_LIMIT + uint64(scrollFrom))
-	}
-
 	// Hook up the streams (searcher -> dataProcessors[0] -> ... -> dataProcessors[n-1]).
 	if len(dataProcessors) > 0 && !dataProcessors[0].IsDataGenerator() {
 		dataProcessors[0].streams = append(dataProcessors[0].streams, NewCachedStream(searcher))
@@ -118,6 +112,17 @@ func NewQueryProcessor(firstAgg *structs.QueryAggregators, queryInfo *query.Quer
 	queryProcessor, err := newQueryProcessorHelper(queryType, lastStreamer, dataProcessors, queryInfo.GetQid(), scrollFrom, includeNulls)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(dataProcessors) > 0 && dataProcessors[0].IsDataGenerator() {
+		queryProcessor.generatedData = true
+		getTotalRecords, err := dataProcessors[0].GetTotalRecordsForDataGenerator()
+		if err != nil {
+			return nil, utils.TeeErrorf("NewQueryProcessor: failed to get total records for data generator; err: %v", err)
+		}
+		query.InitProgressForRRCCmd(getTotalRecords, searcher.qid) // TODO: Find a good way to handle data generators for progress
+		dataProcessors[0].CheckAndSetQidForDataGenerator(searcher.qid)
+		dataProcessors[0].SetLimitForDataGenerator(segutils.QUERY_EARLY_EXIT_LIMIT + uint64(scrollFrom))
 	}
 
 	queryProcessor.startTime = startTime

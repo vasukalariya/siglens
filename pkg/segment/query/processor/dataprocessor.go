@@ -158,6 +158,17 @@ func (dp *DataProcessor) CheckAndSetQidForDataGenerator(qid uint64) {
 	}
 }
 
+func (dp *DataProcessor) GetTotalRecordsForDataGenerator() (uint64, error) {
+	switch dp.processor.(type) {
+	case *gentimesProcessor:
+		return dp.processor.(*gentimesProcessor).GetTotalRecords()
+	case *inputlookupProcessor:
+		return dp.processor.(*inputlookupProcessor).GetTotalRecords()
+	default:
+		return 0, errors.New("DataProcessor.getTotalRecords: processor is not a data generator")
+	}
+}
+
 func (dp *DataProcessor) getStreamInput() (*iqr.IQR, error) {
 	switch len(dp.streams) {
 	case 0:

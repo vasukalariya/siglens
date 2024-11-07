@@ -20,6 +20,7 @@ package processor
 import (
 	"fmt"
 	"io"
+	"math"
 	"time"
 
 	"github.com/siglens/siglens/pkg/segment/query/iqr"
@@ -33,6 +34,8 @@ type gentimesProcessor struct {
 	qid           uint64
 	currStartTime uint64
 	limit         uint64
+	totalRecords  uint64
+	foundTotalRecords bool
 }
 
 func addGenTimeEvent(values map[string][]utils.CValueEnclosure, start time.Time, end time.Time) {
@@ -121,4 +124,21 @@ func (p *gentimesProcessor) GetFinalResultIfExists() (*iqr.IQR, bool) {
 
 func (p *gentimesProcessor) IsEOF() bool {
 	return p.currStartTime >= p.options.EndTime
+}
+
+func (p *gentimesProcessor) GetTotalRecords() (uint64, error) {
+	if p.foundTotalRecords {
+		return p.totalRecords, nil
+	}
+
+	diff := p.options.EndTime - p.options.StartTime
+	getUnitInMilli, err := utils.GetTimeUnitInMilli(p.options.Interval.TimeScalr)
+	if err != nil {
+		return 0, fmt.Errorf("gentimesProcessor.GetTotalRecords: Error while getting time unit in milli, err: %v", err)
+	}
+
+	p.totalRecords = uint64(math.Ceil(float64(diff) / float64(getUnitInMilli)))
+	p.foundTotalRecords = true
+
+	return p.totalRecords, nil
 }
