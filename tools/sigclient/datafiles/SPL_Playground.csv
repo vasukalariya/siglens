@@ -1,2 +1,3 @@
-variable_col_16=Palau | where variable_col_13=""Pittsburgh""
-
+variable_col_16=Palau | where variable_col_13="Pittsburgh"
+variable_col_16=Palau | sort variable_col_13
+(((variable_col_13=Sea* AND variable_col_14 = "Oregon") AND invalidCol != XYZ) OR (variable_col_16 = Croa* AND NOT gender = MALE) OR (Snowcook OR app_name="Omenwi*")) | fields variable_col_13, variable_col_14, variable_col_16, gender, app_name
