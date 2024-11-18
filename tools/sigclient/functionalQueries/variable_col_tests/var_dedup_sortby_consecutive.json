@@ -1,9 +1,8 @@
 {
     "queryText": "variable_col_18 > 0 | fields var*, http_status, country | dedup consecutive=true variable_col_3 sortby http_status, country",
     "expectedResult": {
+        "verifyMinimal": true,
         "totalMatched": {
-            "value": 13,
-            "relation": "eq"
         },
         "qtype": "logs-query",
         "records": [

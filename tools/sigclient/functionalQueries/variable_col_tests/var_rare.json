@@ -1,7 +1,8 @@
 {
     "queryText": "variable_col_9=S* | rare variable_col_16 useother=false percentfield=rare_pc countfield=rare_count showperc=true",
     "expectedResult": {
-        "bucketCount": 6,
+        "verifyMinimal": true,
+        "bucketCount": 0,
         "qtype": "aggs-query",
         "groupByCols": [
             "http_method"

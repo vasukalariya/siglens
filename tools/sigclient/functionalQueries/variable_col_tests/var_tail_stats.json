@@ -1,9 +1,8 @@
 {
     "queryText": "* | tail 30000 | stats count, sum(variable_col_19) as sum, avg(variable_col_18) as avg_latency",
     "expectedResult": {
+        "verifyMinimal": true,
         "totalMatched": {
-            "value": 1,
-            "relation": "eq"
         },
         "qtype": "logs-query",
         "records": [

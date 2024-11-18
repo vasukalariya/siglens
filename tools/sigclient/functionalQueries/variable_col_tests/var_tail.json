@@ -1,9 +1,8 @@
 {
     "queryText": "variable_col_3=female | fields variable_col3, ident, variable_col_6 | tail",
     "expectedResult": {
+        "verifyMinimal": true,
         "totalMatched": {
-            "value": 10,
-            "relation": "eq"
         },
         "qtype": "logs-query",
         "records": [

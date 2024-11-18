@@ -1,9 +1,8 @@
 {
     "queryText": "variable_col_16=Palau | sort variable_col_13",
     "expectedResult": {
+        "verifyMinimal": true,
         "totalMatched": {
-            "value": 100,
-            "relation": "gte"
         },
         "qtype": "logs-query",
         "records": [

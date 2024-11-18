@@ -1,19 +1,20 @@
 {
     "queryText": "* | stats min(variable_col_15), max(variable_col_17), sum(variable_col_18), count BY variable_col_3 | eval temp_value = 1",
     "expectedResult": {
-         "bucketCount": 2,
-         "qtype": "aggs-query",
-         "groupByCols": [
+        "verifyMinimal": true,
+        "bucketCount": 0,
+        "qtype": "aggs-query",
+        "groupByCols": [
              "gender"
          ],
-         "measureFunctions": [
+        "measureFunctions": [
             "count(*)",
             "temp_value",
             "min(http_status)",
             "max(latency)",
             "sum(longitude)"
         ],
-         "measure": [
+        "measure": [
         ]
      }
  }

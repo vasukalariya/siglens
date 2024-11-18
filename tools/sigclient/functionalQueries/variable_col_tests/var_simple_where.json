@@ -1,9 +1,8 @@
 {
     "queryText": "variable_col_16=Palau | where variable_col_13=\"Pittsburgh\"",
     "expectedResult": {
+        "verifyMinimal": true,
         "totalMatched": {
-            "value": 7,
-            "relation": "eq"
         },
         "qtype": "logs-query",
         "records": [

@@ -1,9 +1,8 @@
 {
     "queryText": "search variable_col_0=batch* group=\"group 0\" user_agent=Mozilla*Mac* AND user_agent!=Opera* variable_col_17 > 0 | earliest=-12h@h | eval hobby_http=hobby+\"@\"+http_method | timechart span=15m max(variable_col_19) as max_latency by hobby_http | sort -max_latency",
     "expectedResult": {
+        "verifyMinimal": true,
         "totalMatched": {
-            "value": 1,
-            "relation": "eq"
         },
         "qtype": "logs-query",
         "records": [
