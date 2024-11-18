@@ -1,44 +1,54 @@
 ## Currently implemented in the new pipline
-# simple_where.json
-# simple_sort.json
-# complex_search.json
-# complex_search_2.json
-# search_with_eval.json
-# search_1col_fields.json
-# grpby_1col_4stats.json
-# 3stats.json
-# bin.json
-# 9stats.json
-# stats_groupby_with_eval.json
-# 9stats_groupby_2col.json
-# inputlookup.json 
-# inputlookup_2.json
-# inputlookup_3.json
-# head.json
-# head2.json
-# fillnull_with_eval.json
-# stats_group_by_eval.json
-# eval_groupby_2col_2stats.json
-# eval_fields_timechart.json
-# multi_value.json
-# gentimes.json
-# gentimes_2.json
-# mvexpand.json
-# rex_stats_groupby_eval_stats.json
-# eval_stats_sort_stats_groupby_where.json
-# eval_stats_sort.json
-# stats_eval.json
-# eval_timechart_sort.json
-# search_timechart_no_groupby.json
-# tail.json
-# sort_tail_eval_newField.json
-# tail_stats.json
-# dedup_sortby_consecutive.json
-# dedup_sortby.json
-# top.json
-# rare.json
-# rare_top.json
-# stats_top.json
+simple_where.json
+simple_sort.json
+complex_search.json
+complex_search_2.json
+search_with_eval.json
+search_1col_fields.json
+grpby_1col_4stats.json
+3stats.json
+bin.json
+9stats.json
+stats_groupby_with_eval.json
+9stats_groupby_2col.json
+inputlookup.json 
+inputlookup_2.json
+inputlookup_3.json
+head.json
+head2.json
+fillnull_with_eval.json
+stats_group_by_eval.json
+eval_groupby_2col_2stats.json
+eval_fields_timechart.json
+multi_value.json
+gentimes.json
+gentimes_2.json
+mvexpand.json
+rex_stats_groupby_eval_stats.json
+eval_stats_sort_stats_groupby_where.json
+eval_stats_sort.json
+stats_eval.json
+eval_timechart_sort.json
+search_timechart_no_groupby.json
+tail.json
+sort_tail_eval_newField.json
+tail_stats.json
+dedup_sortby_consecutive.json
+dedup_sortby.json
+top.json
+rare.json
+rare_top.json
+stats_top.json
+streamstats_win3.json
+streamstats_win4_currF.json
+streamstats_win4_grpby.json
+streamstats_win4_reset_before_after.json
+streamstats_win2_gloF_currF_grpby.json
+streamstats_win2_gloF_grpby.json
+streamstats_multi_resets_grpby.json
+streamstats_eval.json
+streamstats_after_stats.json
+streamstats_after_grpby.json
 
 # Variable column based queries
 variable_col_tests/var_simple_where.json
@@ -74,19 +84,6 @@ variable_col_tests/var_top.json
 variable_col_tests/var_rare.json
 variable_col_tests/var_rare_top.json
 variable_col_tests/var_stats_top.json
-
-## Uncomment when implemented for new pipline
-# streamstats_win3.json
-# streamstats_win4_currF.json
-# streamstats_win4_grpby.json
-# streamstats_win4_reset_before_after.json
-# streamstats_win2_gloF_currF_grpby.json
-# streamstats_win2_gloF_grpby.json
-# streamstats_multi_resets_grpby.json
-# streamstats_eval.json
-# streamstats_after_stats.json
-# streamstats_after_grpby.json
-
 
 ## Queries not working for multi-index
 # transaction.json
