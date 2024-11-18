@@ -1,3 +1,0 @@
-{
-    "queryText": "search index=ind* gender=*male (Boston) OR (*bos*) | stats list(question) by gender, timestamp"
-}
