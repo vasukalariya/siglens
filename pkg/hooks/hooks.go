@@ -103,6 +103,7 @@ type Hooks struct {
 	OverrideDeleteIndexRequestHook func(ctx *fasthttp.RequestCtx, myid uint64, indexName string) bool
 	GetNextSuffixHook              func(uint64, func(uint64) string) (uint64, error)
 	GetOwnedSegmentsHook           func() map[string]struct{}
+	HandleUnusedRotatedSegmentsHook func(segKey string)
 
 	// Query server
 	QueryMiddlewareRecoveryHook func(ctx *fasthttp.RequestCtx) error
