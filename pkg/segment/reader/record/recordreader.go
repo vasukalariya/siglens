@@ -41,6 +41,7 @@ type RRCsReaderI interface {
 	ReadAllColsForRRCs(segKey string, vTable string, rrcs []*utils.RecordResultContainer,
 		qid uint64, ignoredCols map[string]struct{}) (map[string][]utils.CValueEnclosure, error)
 	GetColsForSegKey(segKey string, vTable string) (map[string]struct{}, error)
+	ReadSpecificColsForRRCs(segKey string, rrcs []*utils.RecordResultContainer, specificCols map[string]struct{}, qid uint64, fetchFromBlob bool) (map[string][]utils.CValueEnclosure, error)
 	ReadColForRRCs(segKey string, rrcs []*utils.RecordResultContainer, cname string, qid uint64, fetchFromBlob bool) ([]utils.CValueEnclosure, error)
 	GetReaderId() utils.T_SegReaderId
 }
@@ -124,6 +125,19 @@ func (reader *RRCsReader) GetColsForSegKey(segKey string, vTable string) (map[st
 	// TODO: make the CheckAndGetColsForSegKey functions return a set instead
 	// of a map[string]bool so we don't have to do the conversion here
 	return toputils.MapToSet(allCols), nil
+}
+
+func (reader *RRCsReader) ReadSpecificColsForRRCs(segKey string, rrcs []*utils.RecordResultContainer, specificCols map[string]struct{}, qid uint64, fetchFromBlob bool) (map[string][]utils.CValueEnclosure, error) {
+	result := make(map[string][]utils.CValueEnclosure)
+	for col := range specificCols {
+		colValues, err := reader.ReadColForRRCs(segKey, rrcs, col, qid, fetchFromBlob)
+		if err != nil {
+			return nil, fmt.Errorf("ReadSpecificColsForRRCs: failed to read column %s for segKey %s; err=%v", col, segKey, err)
+		}
+		result[col] = colValues
+	}
+
+	return result, nil
 }
 
 func (reader *RRCsReader) ReadColForRRCs(segKey string, rrcs []*utils.RecordResultContainer, cname string, qid uint64, fetchFromBlob bool) ([]utils.CValueEnclosure, error) {

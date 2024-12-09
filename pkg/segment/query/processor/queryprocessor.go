@@ -28,6 +28,7 @@ import (
 	"github.com/siglens/siglens/pkg/hooks"
 	"github.com/siglens/siglens/pkg/segment/aggregations"
 	"github.com/siglens/siglens/pkg/segment/query"
+	"github.com/siglens/siglens/pkg/segment/query/colusage"
 	"github.com/siglens/siglens/pkg/segment/query/iqr"
 	"github.com/siglens/siglens/pkg/segment/query/summary"
 	"github.com/siglens/siglens/pkg/segment/structs"
@@ -122,6 +123,7 @@ func NewQueryProcessor(firstAgg *structs.QueryAggregators, queryInfo *query.Quer
 	if err != nil {
 		return nil, utils.TeeErrorf("NewQueryProcessor: cannot make searcher; err=%v", err)
 	}
+	searcher.queryCols = colusage.GetQueryColumns(firstAgg)
 
 	err = query.InitScrollFrom(searcher.qid, uint64(scrollFrom))
 	if err != nil {

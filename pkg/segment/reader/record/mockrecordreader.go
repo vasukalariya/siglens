@@ -89,3 +89,20 @@ Outer:
 
 	return values, nil
 }
+
+
+func (mocker *MockRRCsReader) ReadSpecificColsForRRCs(_segKey string, rrcs []*utils.RecordResultContainer,
+	specificCols map[string]struct{}, _qid uint64, _fetchFromBlob bool) (map[string][]utils.CValueEnclosure, error) {
+
+	result := make(map[string][]utils.CValueEnclosure)
+	for col := range specificCols {
+		values, err := mocker.ReadColForRRCs(_segKey, rrcs, col, _qid, _fetchFromBlob)
+		if err != nil {
+			return nil, err
+		}
+
+		result[col] = values
+	}
+
+	return result, nil
+}

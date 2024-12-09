@@ -71,6 +71,7 @@ type Searcher struct {
 	unsentRRCs           []*segutils.RecordResultContainer
 	segEncToKey          *toputils.TwoWayMap[uint32, string]
 	segEncToKeyBaseValue uint32
+	queryCols map[string]struct{}
 
 	setAsIqrStatsResults bool
 }
@@ -262,6 +263,7 @@ func (s *Searcher) fetchSortedRRCsForQSR(qsr *query.QuerySegmentRequest) (*iqr.I
 	if err != nil {
 		return nil, err
 	}
+	iqr.SetQueryCols(s.queryCols)
 
 	return iqr, nil
 }

@@ -279,6 +279,24 @@ func (iqrRdr *IQRReader) ReadAllColsForRRCs(segKey string, vTable string, rrcs [
 	return knownValues, nil
 }
 
+func (iqrRdr *IQRReader) ReadSpecificColsForRRCs(segKey string, vTable string, rrcs []*utils.RecordResultContainer,
+	qid uint64, requiredCols map[string]struct{}) (map[string][]utils.CValueEnclosure, error) {
+	if iqrRdr.IsSingleReader() {
+		return iqrRdr.reader.ReadSpecificColsForRRCs(segKey, rrcs, requiredCols, qid, false)
+	}
+
+	knownValues := make(map[string][]utils.CValueEnclosure)
+	for col := range requiredCols {
+		colValues, err := iqrRdr.readColumnsForRRCs(segKey, vTable, rrcs, qid, nil, nil)
+		if err != nil {
+			return nil, fmt.Errorf("iqrReader.ReadAllColsForRRCs: cannot read columns for segKey=%v; err=%v", segKey, err)
+		}
+		knownValues[col] = colValues[col]
+	}
+
+	return knownValues, nil
+}
+
 func (iqrRdr *IQRReader) getColumnsForSegKey(segKey string, vTable string, segEnc utils.T_SegEncoding) (map[string]struct{}, error) {
 	if iqrRdr.IsSingleReader() {
 		return iqrRdr.reader.GetColsForSegKey(segKey, vTable)

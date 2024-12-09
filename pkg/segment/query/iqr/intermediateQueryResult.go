@@ -88,6 +88,7 @@ type IQR struct {
 	// Used only if the mode is withoutRRCs. Sometimes not used in that mode.
 	groupbyColumns []string
 	measureColumns []string
+	queryCols map[string]struct{} // Columns required for the query
 
 	statsResults *IQRStatsResults
 }
@@ -170,6 +171,10 @@ func (iqr *IQR) validate() error {
 	}
 
 	return nil
+}
+
+func (iqr *IQR) SetQueryCols(cols map[string]struct{}) {
+	iqr.queryCols = cols
 }
 
 func (iqr *IQR) AppendRRCs(rrcs []*utils.RecordResultContainer, segEncToKey map[uint32]string) error {
@@ -297,7 +302,7 @@ func (iqr *IQR) ReadAllColumns() (map[string][]utils.CValueEnclosure, error) {
 		// There's no data.
 		return nil, nil
 	case withRRCs:
-		return iqr.readAllColumnsWithRRCs()
+		return iqr.readColumnsWithRRCs(false)
 	case withoutRRCs:
 		return iqr.knownValues, nil
 	default:
@@ -385,7 +390,7 @@ func (iqr *IQR) ReadColumnsWithBackfill(cnames []string) (map[string][]utils.CVa
 	return result, nil
 }
 
-func (iqr *IQR) readAllColumnsWithRRCs() (map[string][]utils.CValueEnclosure, error) {
+func (iqr *IQR) readColumnsWithRRCs(onlyRequired bool) (map[string][]utils.CValueEnclosure, error) {
 	// Prepare to call BatchProcessToMap().
 	getBatchKey := func(rrc *utils.RecordResultContainer) uint32 {
 		if rrc == nil {
@@ -409,7 +414,19 @@ func (iqr *IQR) readAllColumnsWithRRCs() (map[string][]utils.CValueEnclosure, er
 		}
 
 		vTable := rrcs[0].VirtualTableName
-		colToValues, err := iqr.reader.ReadAllColsForRRCs(segKey, vTable, rrcs, iqr.qid, iqr.deletedColumns)
+		var colToValues map[string][]utils.CValueEnclosure
+		var err error
+		if onlyRequired {
+			colsToRead := map[string]struct{}{}
+			for col := range iqr.queryCols {
+				if _, isDeleted := iqr.deletedColumns[col]; !isDeleted {
+					colsToRead[col] = struct{}{}
+				}
+			}
+			colToValues, err = iqr.reader.ReadSpecificColsForRRCs(segKey, vTable, rrcs, iqr.qid, colsToRead)
+		} else {
+			colToValues, err = iqr.reader.ReadAllColsForRRCs(segKey, vTable, rrcs, iqr.qid, iqr.deletedColumns)
+		}
 		if err != nil {
 			log.Errorf("qid=%v, IQR.readAllColumnsWithRRCs: error reading all columns for segKey %v; err=%v",
 				iqr.qid, segKey, err)
@@ -1280,7 +1297,7 @@ func (iqr *IQR) AsResult(qType structs.QueryType, includeNulls bool) (*structs.P
 	case notSet:
 		// There's no data.
 	case withRRCs:
-		records, err = iqr.readAllColumnsWithRRCs()
+		records, err = iqr.readColumnsWithRRCs(false)
 		if err != nil {
 			log.Errorf("qid=%v, IQR.AsResult: error reading all columns: %v", iqr.qid, err)
 			return nil, err
