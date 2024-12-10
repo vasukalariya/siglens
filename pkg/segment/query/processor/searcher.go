@@ -285,15 +285,15 @@ func (s *Searcher) fetchSortedRRCsForQSR(qsr *query.QuerySegmentRequest, pqmr *p
 		}
 	}
 
-	if !canUsePQMR {
-		err = s.applyRawSearchForSortedIndex(qsr, searchResults, sizeLimit, aggs, blockToValidRecNums)
-		if err != nil {
-			return nil, fmt.Errorf("fetchSortedRRCsForQSR: failed to apply raw search, err: %v", err)
-		}
-	} else {
+	if canUsePQMR {
 		err = s.applyPQSForSortedIndex(qsr, searchResults, pqmr, blockToMetadata, blockSummaries, sizeLimit, aggs, blockToValidRecNums)
 		if err != nil {
 			return nil, fmt.Errorf("fetchSortedRRCsForQSR: failed to apply PQS, err: %v", err)
+		}
+	} else {
+		err = s.applyRawSearchForSortedIndex(qsr, searchResults, sizeLimit, aggs, blockToValidRecNums)
+		if err != nil {
+			return nil, fmt.Errorf("fetchSortedRRCsForQSR: failed to apply raw search, err: %v", err)
 		}
 	}
 
