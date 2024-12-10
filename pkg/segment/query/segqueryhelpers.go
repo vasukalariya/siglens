@@ -77,6 +77,10 @@ func (qi *QueryInformation) GetQueryRange() *dtu.TimeRange {
 	return qi.queryRange
 }
 
+func (qi *QueryInformation) GetColsToSearch() map[string]bool {
+	return toputils.GetShallowCopy(qi.colsToSearch)
+}
+
 func (qi *QueryInformation) GetQueryRangeStartMs() uint64 {
 	return qi.queryRange.StartEpochMs
 }
