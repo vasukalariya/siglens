@@ -204,7 +204,7 @@ func (s *Searcher) fetchColumnSortedRRCs() (*iqr.IQR, error) {
 
 	for i, qsr := range qsrs {
 		pqmr, _ := pqmrs[i].Get()
-		nextIQR, err := s.fetchSortedRRCsForQSR(qsr, pqmr)
+		nextIQR, err := s.fetchSortedRRCsForQSR(qsr, pqmr, sorter)
 		if err != nil {
 			log.Errorf("qid=%v, searcher.fetchColumnSortedRRCs: failed to fetch sorted RRCs: %v", s.qid, err)
 			return nil, err
@@ -221,7 +221,7 @@ func (s *Searcher) fetchColumnSortedRRCs() (*iqr.IQR, error) {
 	return result, io.EOF
 }
 
-func (s *Searcher) fetchSortedRRCsForQSR(qsr *query.QuerySegmentRequest, pqmr *pqmr.SegmentPQMRResults) (*iqr.IQR, error) {
+func (s *Searcher) fetchSortedRRCsForQSR(qsr *query.QuerySegmentRequest, pqmr *pqmr.SegmentPQMRResults, sorter *sortProcessor) (*iqr.IQR, error) {
 	// TODO: handle subsequent fetches to this QSR.
 
 	const recordLimit = 1000 // TODO: find a better way to limit.
@@ -255,24 +255,45 @@ func (s *Searcher) fetchSortedRRCsForQSR(qsr *query.QuerySegmentRequest, pqmr *p
 	}
 	searchResults.NextSegKeyEnc = encoding
 
+	blockToValidRecNums := make(map[uint16][]uint16)
+	for _, line := range lines {
+		for _, block := range line.Blocks {
+			if _, ok := blockToValidRecNums[block.BlockNum]; !ok {
+				blockToValidRecNums[block.BlockNum] = make([]uint16, 0)
+			}
+
+			blockToValidRecNums[block.BlockNum] = append(blockToValidRecNums[block.BlockNum], block.RecNums...)
+		}
+	}
+
 	canUsePQMR := false
+	var blockToMetadata map[uint16]*structs.BlockMetadataHolder
+	var blockSummaries []*structs.BlockSummary
 	if pqmr != nil {
-		blockToMetadata, _, err := metadata.GetSearchInfoAndSummaryForPQS(qsr.GetSegKey(), pqmr)
+		blockToMetadata, blockSummaries, err = metadata.GetSearchInfoAndSummaryForPQS(qsr.GetSegKey(), pqmr)
 		if err != nil {
 			log.Errorf("qid=%v, fetchSortedRRCsForQSR: failed to get search info and summary for PQS: %v",
 				s.qid, err)
 			return nil, err
 		}
-		if len(blockToMetadata) == int(metadata.GetNumBlocksInSegment(qsr.GetSegKey())) {
-			canUsePQMR = true
-			
+		canUsePQMR = true
+		for blkNum := range blockToValidRecNums {
+			if _, ok := blockToMetadata[blkNum]; !ok {
+				canUsePQMR = false
+				break
+			}
 		}
 	}
 
 	if !canUsePQMR {
-		err := s.applyRawSearchForSortedIndex(qsr, searchResults, lines, sizeLimit, aggs)
+		err = s.applyRawSearchForSortedIndex(qsr, searchResults, sizeLimit, aggs, blockToValidRecNums)
 		if err != nil {
 			return nil, fmt.Errorf("fetchSortedRRCsForQSR: failed to apply raw search, err: %v", err)
+		}
+	} else {
+		err = s.applyPQSForSortedIndex(qsr, searchResults, pqmr, blockToMetadata, blockSummaries, sizeLimit, aggs, blockToValidRecNums)
+		if err != nil {
+			return nil, fmt.Errorf("fetchSortedRRCsForQSR: failed to apply PQS, err: %v", err)
 		}
 	}
 
@@ -281,25 +302,40 @@ func (s *Searcher) fetchSortedRRCsForQSR(qsr *query.QuerySegmentRequest, pqmr *p
 	iqr := iqr.NewIQR(s.queryInfo.GetQid())
 	err = iqr.AppendRRCs(rrcs, s.segEncToKey.GetMapForReading())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetchSortedRRCsForQSR: failed to append RRCs, err: %v", err)
+	}
+
+	err = iqr.Sort(sorter.less)
+	if err != nil {
+		return nil, fmt.Errorf("fetchSortedRRCsForQSR: failed to sort IQR, err: %v", err)
 	}
 
 	return iqr, nil
 }
 
-func (s *Searcher) applyPQSForSortedIndex(qsr *query.QuerySegmentRequest, searchResults *segresults.SearchResults, lines []sortindex.Line, 
+func (s *Searcher) applyPQSForSortedIndex(qsr *query.QuerySegmentRequest, searchResults *segresults.SearchResults,
 	pqmr *pqmr.SegmentPQMRResults, searchMetadata map[uint16]*structs.BlockMetadataHolder, blkSummaries []*structs.BlockSummary,
-	sizeLimit uint64, aggs *structs.QueryAggregators) error {
+	sizeLimit uint64, aggs *structs.QueryAggregators, blockToValidRecNums map[uint16][]uint16) error {
 
 	if len(searchMetadata) == 0 {
 		log.Infof("qid=%d, applyPQSForSortedIndex: segKey %+v has 0 blocks in segment PQMR results", s.qid, qsr.GetSegKey())
 		return nil
 	}
+
+	// Remove blockNums that are not required to be processed.
+	for blockNum := range searchMetadata {
+		if _, ok := blockToValidRecNums[blockNum]; !ok {
+			delete(searchMetadata, blockNum)
+			pqmr.RemoveBlockResults(blockNum)
+		}
+	}
+
 	req := &structs.SegmentSearchRequest{
-		SegmentKey:         qsr.GetSegKey(),
-		VirtualTableName:   qsr.GetTableName(),
-		AllPossibleColumns: s.queryInfo.GetColsToSearch(),
-		AllBlocksToSearch:  searchMetadata,
+		SegmentKey:          qsr.GetSegKey(),
+		VirtualTableName:    qsr.GetTableName(),
+		AllPossibleColumns:  s.queryInfo.GetColsToSearch(),
+		AllBlocksToSearch:   searchMetadata,
+		BlockToValidRecNums: blockToValidRecNums,
 		SearchMetadata: &structs.SearchMetadataHolder{
 			BlockSummaries:    blkSummaries,
 			SearchTotalMemory: uint64(len(blkSummaries) * 16), // TODO: add bitset size here
@@ -308,7 +344,7 @@ func (s *Searcher) applyPQSForSortedIndex(qsr *query.QuerySegmentRequest, search
 	}
 	nodeRes, err := query.GetOrCreateQuerySearchNodeResult(s.qid)
 	if err != nil {
-		return fmt.Errorf("qid=%d, ApplySinglePQSRawSearch: failed to get or create query search node result! Error: %v", s.qid, err)
+		return fmt.Errorf("qid=%d, applyPQSForSortedIndex: failed to get or create query search node result! Error: %v", s.qid, err)
 	}
 	search.RawSearchPQMResults(req, s.queryInfo.GetParallelismPerFile(), s.queryInfo.GetQueryRange(), aggs, sizeLimit, pqmr, searchResults, s.qid, s.querySummary, nodeRes)
 
@@ -319,22 +355,11 @@ func (s *Searcher) applyPQSForSortedIndex(qsr *query.QuerySegmentRequest, search
 	return nil
 }
 
-func (s *Searcher) applyRawSearchForSortedIndex(qsr *query.QuerySegmentRequest, searchResults *segresults.SearchResults, lines []sortindex.Line, 
-					sizeLimit uint64, aggs *structs.QueryAggregators) error {
+func (s *Searcher) applyRawSearchForSortedIndex(qsr *query.QuerySegmentRequest, searchResults *segresults.SearchResults,
+	sizeLimit uint64, aggs *structs.QueryAggregators, blockToValidRecNums map[uint16][]uint16) error {
 	allSSRs, err := query.GetSSRsFromQSR(qsr, s.querySummary)
 	if err != nil {
 		return fmt.Errorf("fetchSortedRRCsForQSR: failed to get SSRs from QSR: err=%v", err)
-	}
-
-	blockToValidRecNums := make(map[uint16][]uint16)
-	for _, line := range lines {
-		for _, block := range line.Blocks {
-			if _, ok := blockToValidRecNums[block.BlockNum]; !ok {
-				blockToValidRecNums[block.BlockNum] = make([]uint16, 0)
-			}
-
-			blockToValidRecNums[block.BlockNum] = append(blockToValidRecNums[block.BlockNum], block.RecNums...)
-		}
 	}
 
 	for segkeyFname := range allSSRs {
